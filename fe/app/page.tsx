@@ -1,9 +1,31 @@
+import { EventsWatcher } from "./_components/events-watcher";
+import { Hero } from "./_components/hero";
+import { TokenCard } from "./_components/token-card";
+import { TokensProvider } from "./_context/tokens-provider";
+import { tokensData } from "./_data/tokens";
+
 export default function Home() {
 	return (
-		<div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-			<main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-				MAIN
-			</main>
-		</div>
+		<main className="relative min-h-screen p-4 sm:p-16 flex flex-col gap-4">
+			<section>
+				<Hero />
+			</section>
+
+			<section id={"tokenCards"} className="scroll-mt-36">
+				<ul className="flex w-full max-sm:flex-col max-md:gap-2 flex-wrap md:gap-4 items-center justify-center">
+					<TokensProvider>
+						<EventsWatcher>
+							{tokensData.map((token) => {
+								return (
+									<li key={token.id}>
+										<TokenCard {...token} />
+									</li>
+								);
+							})}
+						</EventsWatcher>
+					</TokensProvider>
+				</ul>
+			</section>
+		</main>
 	);
 }

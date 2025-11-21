@@ -8,10 +8,11 @@ import { TypographyH2 } from "./typography/h2";
 export const Header: FC = () => {
 	return (
 		<header
-			className={`sticky z-50 top-0
+			className={`sticky z-50 opacity-100 top-0
 				flex justify-between items-center
 				h-28 sm:h-32 md:h-32 
 				px-4 sm:px-16
+				bg-background
 			`}
 		>
 			<Link href="/" className="flex items-center gap-x-2 sm:gap-x-3">

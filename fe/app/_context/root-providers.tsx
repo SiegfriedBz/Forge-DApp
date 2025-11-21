@@ -1,6 +1,7 @@
 "use client";
 
 import type { FC, PropsWithChildren } from "react";
+import { Toaster } from "sonner";
 import type { State as WagmiState } from "wagmi";
 import { CustomWagmiProvider } from "./custom-wagmi-provider";
 import { ThemeProvider } from "./theme-provider";
@@ -22,6 +23,7 @@ export const RootProviders: FC<PropsWithChildren<Props>> = (props) => {
 			<CustomWagmiProvider initialWagmiState={initialWagmiState}>
 				{children}
 			</CustomWagmiProvider>
+			<Toaster />
 		</ThemeProvider>
 	);
 };
