@@ -18,7 +18,7 @@ export const useCoolDown = (params: Params) => {
 
   const { data: coolDownDelay } = useReadContract({
     ...forgeContractConfig,
-    functionName: "I_COOL_DOWN_DELAY",
+    functionName: "coolDownDelay",
   });
 
   const coolDownDelayInMs = useMemo(
