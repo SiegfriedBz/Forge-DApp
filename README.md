@@ -1,18 +1,34 @@
-# 🔥⚒️🎮 **Forge: Token Crafting Game**
-
-*(README in progress...)*
+# 🔥⚒️🎮 **Forge Token Crafting Game**
 
 ---
 
 ## **Game Overview**
 
-**Forge** is a Web3 token crafting game where players mint, burn, and trade tokens to create rare items. Basic tokens can be minted directly, while forged tokens require burning combinations of basic tokens.
+**Forge** is a Web3 token crafting game where players mint, burn, and trade tokens to create rare items. Basic tokens can be minted directly, while forged tokens require burning combinations of basic tokens. The game includes a cooldown mechanism to prevent spamming.
 
 ---
 
-## **Live Demo 🌐**
+## 🚀 Quick Start
 
-👉 [Play now](https://forge-tokens.vercel.app)
+##### 1. Try the Demo: [🌐 Live Demo](https://forge-tokens.vercel.app)
+
+##### 2. Get Testnet ETH: [Sepolia Faucet](https://sepolia-faucet.pk910.de/)
+
+##### 3. Connect your wallet to the DApp
+
+##### 4. Forge Tokens
+
+###### - Mint Basic Tokens
+
+- Start by minting basic tokens (0, 1, 2)
+
+###### - Burn and Forge
+
+- Burn combinations of basic tokens to create forged tokens (3, 4, 5, 6).
+
+###### - Trade Tokens
+
+- Optimize your inventory by trading tokens.
 
 ---
 
@@ -28,12 +44,10 @@
 ### **2. Minting Rules**
 
 - **Basic Tokens (0, 1, 2):**
-  - **Action:** `mint(_tokenId)`
-  - **Cooldown:** 1 minute per user.
+  - **Cooldown:** 15 seconds per user.
   - **Limit:** 1 token per call.
 
 - **Forged Tokens (3, 4, 5, 6):**
-  - **Action:** `mint(_tokenId)`
   - **Requirements:**
     - **Token 3:** Burn 1x token 0 + 1x token 1.
     - **Token 4:** Burn 1x token 1 + 1x token 2.
@@ -53,20 +67,30 @@
 
 ---
 
-## **How to Play**
-
-1. **Connect your wallet** to the DApp.
-2. **Mint basic tokens** (0, 1, 2) to start crafting.
-3. **Burn combinations** of basic tokens to forge rare tokens (3, 4, 5, 6).
-4. **Trade tokens** to optimize your inventory.
-
----
-
 ## **Tech Stack**
 
-- **Frontend:** Next.js, shadcn/ui, Wagmi, Viem, TanStack Query
-- **Blockchain:** Solidity, Foundry, Alchemy (WebSocket + HTTP RPC)
-- **State Management:** React Context, React Query
+### Frontend
+
+| Technology                   | Purpose                         |
+| ---------------------------- | ------------------------------- |
+| Next.js + TypeScript         | Core framework              |
+| Tailwind + shadcn/ui         | UI styling and components       |
+| Zod + React Hook Form        | Form validation and type safety |
+| React Context                | State management  |
+| Custom Hooks                 | `useMintEvents`, `useForgeEvents`, `useBurnEvents`, `useTradeEvents` (on-chain event-driven refetching) |
+| TanStack Query (React Query) | Caching and data sync           |
+| **Wagmi** + RainbowKit           | Web3 wallet connection & hooks  |
+| pnpm                     | Frontend package manager       |
+
+### Backend
+
+| Layer          | Technologies                     |
+ |----------------|----------------------------------|
+ | Contracts  | **Solidity**, **Foundry**, ***Sepolia***      |
+ | Testing    | **Foundry tests**          |
+ | Storage    | IPFS (NFT metadata)             |
+ | Blockchain Access        | **Alchemy** (HTTP + WebSocket)       |
+ | Package Manager | forge |
 
 ---
 
@@ -75,11 +99,11 @@
 ### **Deployed on Sepolia**
 
 - **Forge Game Contract**
-  [0x7d8A16168D337B2241fCbA1cc5bd196479DF1F0C](https://sepolia.etherscan.io/address/0x7d8A16168D337B2241fCbA1cc5bd196479DF1F0C#code)
+  [0xd4922b783f762feb81ceb08d6f1f4c45a8caa148](https://sepolia.etherscan.io/address/0xd4922b783f762feb81ceb08d6f1f4c45a8caa148#code)
   *(Verified on Etherscan)*
 
 - **FToken ERC1155 Contract**
-  [0xa6D68eDA0993364481C2c5DA8d6cd43e03f592bA](https://sepolia.etherscan.io/address/0xa6D68eDA0993364481C2c5DA8d6cd43e03f592bA#code)
+  [0x8281b01D35A70BDc17D85c6df3d45B67745a5F9f](https://sepolia.etherscan.io/address/0x8281b01D35A70BDc17D85c6df3d45B67745a5F9f#code)
   *(Verified on Etherscan)*
 
 ### **Testing**
@@ -88,4 +112,9 @@
 
 ---
 
-*(README in progress. More details coming soon!)*
+## Author
+
+Built solo by **Siegfried Bozza**: Full-stack development, smart contracts, and deployment.
+
+💼 [LinkedIn](https://www.linkedin.com/in/siegfriedbozza/)
+🐙 [GitHub](https://github.com/SiegfriedBz)
