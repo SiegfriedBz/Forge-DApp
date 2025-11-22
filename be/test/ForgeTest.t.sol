@@ -10,7 +10,8 @@ import {
     Forge__UserInCoolDown,
     Forge__CanOnlyBurnForgedToken,
     Forge__CanNotTradeForSameToken,
-    Forge__CanOnlyTradeForBasicToken
+    Forge__CanOnlyTradeForBasicToken,
+    Forge__OnlyOwnerAllowed
 } from "../src/Forge.sol";
 import {Forge_Constants} from "../script/Forge_Constants.sol";
 import {ForgeScript} from "../script/ForgeScript.s.sol";
@@ -34,8 +35,9 @@ contract ForgeTest is Test, Forge_Constants {
 
     // === deployment Tests ===
     function test_deployment() public view {
+        assertEq(forge.I_OWNER(), owner);
         assertEq(forge.I_MAX_TOKEN_ID(), MAX_TOKEN_ID);
-        assertEq(forge.I_COOL_DOWN_DELAY(), COOL_DOWN_DELAY);
+        assertEq(forge.coolDownDelay(), COOL_DOWN_DELAY);
 
         FToken _token = forge.I_TOKEN();
         address tokenContractOwner = _token.I_OWNER();
@@ -479,5 +481,20 @@ contract ForgeTest is Test, Forge_Constants {
         assertEq(values[0], 1);
         assertEq(values[1], 1);
         assertEq(values[2], 1);
+    }
+
+    // === setCoolDownDelay Tests ===
+    function test_setCoolDownDelay() public {
+        vm.prank(owner);
+        forge.setCoolDownDelay(2 days);
+        assertEq(forge.coolDownDelay(), 2 days);
+    }
+
+    function test_setCoolDownDelay_RevertWhen_NotAdmin() public {
+        vm.prank(player01);
+        vm.expectRevert(Forge__OnlyOwnerAllowed.selector);
+        forge.setCoolDownDelay(2 days);
+
+        assertEq(forge.coolDownDelay(), COOL_DOWN_DELAY);
     }
 }
