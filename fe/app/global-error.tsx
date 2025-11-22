@@ -1,6 +1,5 @@
+/* eslint-disable @next/next/no-html-link-for-pages */
 "use client";
-
-import Link from "next/link";
 
 export default function GlobalError({
 	error,
@@ -37,7 +36,7 @@ export default function GlobalError({
 						<button type="button" onClick={() => reset()}>
 							Try Again
 						</button>
-						<Link href="/">Go Home</Link>
+						<a href="/">Go Home</a>
 					</div>
 				</div>
 			</body>
