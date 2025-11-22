@@ -6,7 +6,6 @@ import {
 	useQuery,
 } from "@tanstack/react-query";
 import { readContract } from "@wagmi/core";
-import { toast } from "sonner";
 import type { ReadContractErrorType } from "viem";
 import { useAccount } from "wagmi";
 import { wagmiHttpConfig } from "../_config/wagmi";
@@ -40,7 +39,7 @@ export const useBalanceOf = (params: ParamsT) => {
 	});
 
 	if (error) {
-		toast.error((error as ReadContractErrorType).shortMessage || error.message);
+		console.log((error as ReadContractErrorType).shortMessage || error.message);
 	}
 
 	return { tokenBalance, refetch, error, isPending };
