@@ -1,27 +1,32 @@
 # 🔥⚒️🎮 **Forge: Token Crafting Game**
+
 *(README in progress...)*
 
 ---
 
 ## **Game Overview**
+
 **Forge** is a Web3 token crafting game where players mint, burn, and trade tokens to create rare items. Basic tokens can be minted directly, while forged tokens require burning combinations of basic tokens.
 
 ---
 
 ## **Live Demo 🌐**
-👉 **Play now:** [https://forge-tokens.vercel.app/](https://forge-tokens.vercel.app)
+
+👉 [Play now](https://forge-tokens.vercel.app)
 
 ---
 
 ## **Game Rules**
 
 ### **1. Token Categories**
+
 | Token IDs | Type      | Minting Rule                          |
 |-----------|-----------|---------------------------------------|
 | 0, 1, 2   | Basic     | Mint directly (1-minute cooldown).   |
 | 3, 4, 5, 6| Forged    | Burn specific basic tokens to mint.  |
 
 ### **2. Minting Rules**
+
 - **Basic Tokens (0, 1, 2):**
   - **Action:** `mint(_tokenId)`
   - **Cooldown:** 1 minute per user.
@@ -36,10 +41,12 @@
     - **Token 6:** Burn 1x token 0 + 1x token 1 + 1x token 2.
 
 ### **3. Burning & Trading**
+
 - **Burning:** Only tokens 3-6 can be burned directly.
 - **Trading:** Burn any token to mint tokens 0-2 (cannot trade a token for itself).
 
 ### **Key Constraints**
+
 - **Cooldown:** Applies only to minting tokens 0-2.
 - **Single Mint:** Only 1 token per function call.
 - **Ownership:** Only the Forge contract can mint/burn tokens.
@@ -47,6 +54,7 @@
 ---
 
 ## **How to Play**
+
 1. **Connect your wallet** to the DApp.
 2. **Mint basic tokens** (0, 1, 2) to start crafting.
 3. **Burn combinations** of basic tokens to forge rare tokens (3, 4, 5, 6).
@@ -55,6 +63,7 @@
 ---
 
 ## **Tech Stack**
+
 - **Frontend:** Next.js, shadcn/ui, Wagmi, Viem, TanStack Query
 - **Blockchain:** Solidity, Foundry, Alchemy (WebSocket + HTTP RPC)
 - **State Management:** React Context, React Query
@@ -62,7 +71,9 @@
 ---
 
 ## **Contracts**
+
 ### **Deployed on Sepolia**
+
 - **Forge Game Contract**
   [0xd4922b783f762feb81ceb08d6f1f4c45a8caa148](https://sepolia.etherscan.io/address/0xd4922b783f762feb81ceb08d6f1f4c45a8caa148#code)
   *(Verified on Etherscan)*
@@ -72,6 +83,7 @@
   *(Verified on Etherscan)*
 
 ### **Testing**
+
 - **100% Coverage:** Both Solidity contracts (Forge + FToken) are tested with **Foundry**.
 
 ---
