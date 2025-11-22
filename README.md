@@ -75,11 +75,11 @@
 ### **Deployed on Sepolia**
 
 - **Forge Game Contract**
-  [0xd4922b783f762feb81ceb08d6f1f4c45a8caa148](https://sepolia.etherscan.io/address/0xd4922b783f762feb81ceb08d6f1f4c45a8caa148#code)
+  [0x7d8A16168D337B2241fCbA1cc5bd196479DF1F0C](https://sepolia.etherscan.io/address/0x7d8A16168D337B2241fCbA1cc5bd196479DF1F0C#code)
   *(Verified on Etherscan)*
 
 - **FToken ERC1155 Contract**
-  [0x8281b01D35A70BDc17D85c6df3d45B67745a5F9f](https://sepolia.etherscan.io/address/0x8281b01D35A70BDc17D85c6df3d45B67745a5F9f#code)
+  [0xa6D68eDA0993364481C2c5DA8d6cd43e03f592bA](https://sepolia.etherscan.io/address/0xa6D68eDA0993364481C2c5DA8d6cd43e03f592bA#code)
   *(Verified on Etherscan)*
 
 ### **Testing**
