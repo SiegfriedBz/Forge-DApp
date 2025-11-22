@@ -11,7 +11,7 @@ export default function Home() {
 				<Hero />
 			</section>
 
-			<section id={"tokenCards"} className="scroll-mt-36">
+			<section>
 				<ul className="flex w-full max-sm:flex-col max-md:gap-2 flex-wrap md:gap-4 items-center justify-center">
 					<TokensProvider>
 						<EventsWatcher>

@@ -1,14 +1,9 @@
 "use client";
 
 import "@rainbow-me/rainbowkit/styles.css";
-import {
-	darkTheme,
-	lightTheme,
-	RainbowKitProvider,
-} from "@rainbow-me/rainbowkit";
+import { darkTheme, RainbowKitProvider } from "@rainbow-me/rainbowkit";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useTheme } from "next-themes";
-import { type FC, type PropsWithChildren, useMemo, useState } from "react";
+import { type FC, type PropsWithChildren, useState } from "react";
 import {
 	type Config as WagmiConfig,
 	WagmiProvider,
@@ -16,13 +11,13 @@ import {
 } from "wagmi";
 import { wagmiHttpConfig } from "../_config/wagmi";
 
-const rainbowLightTheme = {
-	accentColor: "#9b2c2c",
-	accentColorForeground: "#fff",
-};
-const rainbowDarkTheme = {
-	accentColor: "#df7368",
-	accentColorForeground: "#000",
+const rainbowTheme = {
+	...darkTheme(),
+	colors: {
+		...darkTheme().colors,
+		modalBackground: "#151210",
+		accentColor: "#df7368",
+	},
 };
 
 type Props = {
@@ -32,25 +27,13 @@ type Props = {
 export const CustomWagmiProvider: FC<PropsWithChildren<Props>> = (props) => {
 	const { initialWagmiState, children } = props;
 
-	const { theme, systemTheme } = useTheme();
-	const currentTheme = useMemo(
-		() => (theme === "system" ? systemTheme : theme),
-		[theme, systemTheme],
-	);
-
 	const [wagmiConfig] = useState<WagmiConfig>(() => wagmiHttpConfig);
 	const [queryClient] = useState<QueryClient>(() => new QueryClient());
-
-	const rainbowTheme = useMemo(() => {
-		return currentTheme === "dark"
-			? darkTheme(rainbowDarkTheme)
-			: lightTheme(rainbowLightTheme);
-	}, [currentTheme]);
 
 	return (
 		<WagmiProvider config={wagmiConfig} initialState={initialWagmiState}>
 			<QueryClientProvider client={queryClient}>
-				<RainbowKitProvider key={currentTheme} theme={rainbowTheme} coolMode>
+				<RainbowKitProvider theme={rainbowTheme} coolMode>
 					{children}
 				</RainbowKitProvider>
 			</QueryClientProvider>

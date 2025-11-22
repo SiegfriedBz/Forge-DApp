@@ -13,7 +13,6 @@ import {
 	FormControl,
 	FormField,
 	FormItem,
-	FormLabel,
 	FormMessage,
 } from "@/components/ui/form";
 import {
@@ -68,21 +67,17 @@ export const TradeForm: FC<Props> = (props) => {
 		<Form {...form}>
 			<form
 				onSubmit={form.handleSubmit(onSubmit)}
-				className="flex flex-col justify-between mt-0.5"
+				className="flex flex-col justify-between gap-2"
 			>
 				<FormField
 					control={form.control}
 					name="tokenIdToMint"
 					render={({ field }) => (
 						<FormItem>
-							<FormLabel>Token To Mint</FormLabel>
-							<Select
-								onValueChange={field.onChange}
-								// defaultValue={field.value.toString()}
-							>
+							<Select onValueChange={field.onChange}>
 								<FormControl className="w-full">
 									<SelectTrigger className="min-h-16 w-46">
-										<SelectValue placeholder="Select Token" />
+										<SelectValue placeholder="Select Token To Mint" />
 									</SelectTrigger>
 								</FormControl>
 								<SelectContent>
@@ -112,7 +107,7 @@ export const TradeForm: FC<Props> = (props) => {
 						</FormItem>
 					)}
 				/>
-				<DialogFooter className="w-full mb-0.5">
+				<DialogFooter className="w-full">
 					<DialogClose asChild>
 						<Button variant="secondary" type="submit" className="w-full">
 							Trade

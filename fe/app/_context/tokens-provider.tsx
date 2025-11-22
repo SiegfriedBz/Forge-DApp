@@ -9,6 +9,7 @@ export const TokensProvider: FC<PropsWithChildren> = (props) => {
 
 	// state for tracking base-tokens cooldown
 	const [isCoolDown, setIsCoolDown] = useState<boolean>(false);
+	const [coolDownEndTime, setCoolDownEndTime] = useState<number | null>(null);
 
 	// state for tracking which forged-token card is hovered
 	const [hoveredForgeTokenId, setHoveredForgeTokenId] = useState<number | null>(
@@ -21,8 +22,10 @@ export const TokensProvider: FC<PropsWithChildren> = (props) => {
 	const value = useMemo(
 		() => ({
 			// base tokens
-			isCoolDown,
+			isCoolDown, 
 			setIsCoolDown,
+			coolDownEndTime, 
+			setCoolDownEndTime,
 
 			// forged tokens
 			forgeabilityByTokenId,
@@ -32,6 +35,7 @@ export const TokensProvider: FC<PropsWithChildren> = (props) => {
 		}),
 		[
 			isCoolDown,
+			coolDownEndTime,
 			forgeabilityByTokenId,
 			reCheckForgeability,
 			hoveredForgeTokenId,
