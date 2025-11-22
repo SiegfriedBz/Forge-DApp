@@ -7,5 +7,5 @@ contract FToken_Constants {
 
 contract Forge_Constants is FToken_Constants {
     uint256 internal constant MAX_TOKEN_ID = 6;
-    uint256 internal constant COOL_DOWN_DELAY = 60 seconds;
+    uint256 internal constant COOL_DOWN_DELAY = 15 seconds;
 }
