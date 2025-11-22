@@ -11,6 +11,7 @@ import {FToken} from "./FToken.sol";
 /**
  * errors
  */
+error Forge__OnlyOwnerAllowed();
 error Forge__UserInCoolDown(address user);
 error Forge__InvalidToken(uint256 tokenId);
 error Forge__CanOnlyBurnForgedToken(uint256 tokenId);
@@ -18,14 +19,6 @@ error Forge__CanNotTradeForSameToken(uint256 tokenId);
 error Forge__CanOnlyTradeForBasicToken(uint256 tokenId);
 
 contract Forge {
-    /**
-     * state
-     */
-    FToken public immutable I_TOKEN;
-    uint256 public immutable I_COOL_DOWN_DELAY;
-    uint256 public immutable I_MAX_TOKEN_ID;
-    mapping(address user => uint256 coolDownTimer) public userCoolDownTimer;
-
     /**
      * events
      */
@@ -35,13 +28,37 @@ contract Forge {
     event Forge__Trade(address indexed user, uint256 indexed burnedTokenId, uint256 indexed mintedTokenId);
 
     /**
+     * state
+     */
+    address public immutable I_OWNER;
+    FToken public immutable I_TOKEN;
+    uint256 public immutable I_MAX_TOKEN_ID;
+    uint256 public coolDownDelay;
+    mapping(address user => uint256 coolDownTimer) public userCoolDownTimer;
+
+    /**
+     * modifiers
+     */
+    modifier onlyOwner() {
+        _onlyOwner();
+        _;
+    }
+
+    function _onlyOwner() internal view {
+        if (msg.sender != I_OWNER) {
+            revert Forge__OnlyOwnerAllowed();
+        }
+    }
+
+    /**
      * functions - constructor
      * deploy Token contract and set pointer
      */
     constructor(string memory _tokenUri, uint256 _maxTokenId, uint256 _coolDownDelay) {
+        I_OWNER = msg.sender;
         I_MAX_TOKEN_ID = _maxTokenId;
-        I_COOL_DOWN_DELAY = _coolDownDelay;
         I_TOKEN = new FToken(_tokenUri);
+        coolDownDelay = _coolDownDelay;
     }
 
     /**
@@ -61,7 +78,7 @@ contract Forge {
             if (block.timestamp < userCoolDownTimer[msg.sender]) {
                 revert Forge__UserInCoolDown(msg.sender);
             } else {
-                userCoolDownTimer[msg.sender] = block.timestamp + I_COOL_DOWN_DELAY;
+                userCoolDownTimer[msg.sender] = block.timestamp + coolDownDelay;
                 I_TOKEN.mint(msg.sender, _tokenId, 1);
 
                 emit Forge__MintToken(msg.sender, _tokenId, 1);
@@ -117,6 +134,13 @@ contract Forge {
         I_TOKEN.mint(msg.sender, _tokenIdToMint, 1);
 
         emit Forge__Trade(msg.sender, _tokenIdToBurn, _tokenIdToMint);
+    }
+
+    /**
+     * Admin function to set coolDownDelay
+     */
+    function setCoolDownDelay(uint256 _coolDownDelay) public onlyOwner {
+        coolDownDelay = _coolDownDelay;
     }
 
     /**
