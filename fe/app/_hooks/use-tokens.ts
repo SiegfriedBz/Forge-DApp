@@ -7,6 +7,9 @@ export type TokensContextT = {
 	// base tokens
 	isCoolDown: boolean;
 	setIsCoolDown: React.Dispatch<React.SetStateAction<boolean>>;
+	coolDownEndTime: number | null;
+  setCoolDownEndTime: React.Dispatch<React.SetStateAction<number | null>>;
+
 
 	// forge tokens
 	forgeabilityByTokenId: Record<number, boolean>;

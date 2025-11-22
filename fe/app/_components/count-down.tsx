@@ -1,28 +1,42 @@
 "use client";
 
-import { animate, motion, useMotionValue, useTransform } from "motion/react";
-import { type FC, useEffect } from "react";
+import { type FC, startTransition, useEffect, useState } from "react";
+import { cn } from "@/lib/utils";
+import { useTokens } from "../_hooks/use-tokens";
 
 type Props = {
-	coolDownDelay: number | null;
+  coolDownEndTime: number
+  className?: string;
 };
-export const CountDown: FC<Props> = (props) => {
-	const { coolDownDelay } = props;
 
-	const count = useMotionValue(coolDownDelay ?? 60);
-	const rounded = useTransform(count, Math.round);
+export const Countdown:FC<Props> = (props) => {
+  const {coolDownEndTime, className } = props
 
-	useEffect(() => {
-		const animation = animate(count, 0, {
-			duration: (coolDownDelay ?? 60) + 4,
-		});
+  const [timeLeft, setTimeLeft] = useState<number>(0);
 
-		return () => animation.cancel();
-	}, [count, coolDownDelay]);
+  const {setIsCoolDown, setCoolDownEndTime} = useTokens()
 
-	return (
-		<motion.span initial={{ scale: 0.85 }} animate={{ scale: 1.25 }}>
-			{rounded}
-		</motion.span>
-	);
+  useEffect(() => {
+    if (!coolDownEndTime) return;
+
+    const updateTimeLeft = () => {
+      const now = Date.now();
+      const remainingTime = Math.max(0, Math.floor((coolDownEndTime - now) / 1000));
+      setTimeLeft(remainingTime);
+
+      if(remainingTime === 0) {
+        startTransition(() => {
+            setIsCoolDown(false)
+            setCoolDownEndTime(null)
+        })
+      }
+    };
+
+    updateTimeLeft();
+    const interval = setInterval(updateTimeLeft, 1000);
+    
+    return () => clearInterval(interval);
+  }, [coolDownEndTime, setIsCoolDown, setCoolDownEndTime]);
+
+  return <span className={cn("font-bold", className)}>{timeLeft}</span>;
 };
