@@ -49,10 +49,13 @@ export const TokenCard: FC<Props> = (props) => {
 		[isBaseToken, hoveredForgeTokenId, requiredToForgeTokenIds],
 	);
 
+	const firstCardId = id === 0 ? { id: "cards" } : {};
+
 	return (
 		<Card
+		{...firstCardId}
 			className={cn(
-				"max-sm:min-w-[20rem] max-sm:max-w-104 max-md:max-w-108 md:max-w-118",
+				"max-sm:min-w-[20rem] max-sm:max-w-104 max-md:max-w-108 md:max-w-118 scroll-mt-16",
 				isBaseToken && isCoolDown
 					? "ring-1 ring-secondary"
 					: "hover:ring hover:ring-primary/20 transition duration-200",

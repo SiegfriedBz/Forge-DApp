@@ -3,6 +3,7 @@
 import { LoaderIcon } from "lucide-react";
 import Image from "next/image";
 import type { ComponentProps, FC, PropsWithChildren } from "react";
+import { useAccount } from "wagmi";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -22,6 +23,8 @@ type Props = ComponentProps<typeof Dialog> & {
 export const BurnDialog: FC<PropsWithChildren<Props>> = (props) => {
 	const { tokenId: tokenIdToBurn, tokenBalance, ...rest } = props;
 
+	const { address } = useAccount();
+
 	const { burnCall, isPending, isConfirming } = useBurn({
 		tokenIdToBurn,
 	});
@@ -31,7 +34,7 @@ export const BurnDialog: FC<PropsWithChildren<Props>> = (props) => {
 			<DialogTrigger asChild>
 				<Button
 					variant="destructive"
-					disabled={!tokenBalance}
+					disabled={!tokenBalance || !address}
 					className="w-16 cursor-pointer"
 				>
 					{isPending || isConfirming ? (

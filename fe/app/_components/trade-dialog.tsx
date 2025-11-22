@@ -3,6 +3,7 @@
 import { LoaderIcon } from "lucide-react";
 import Image from "next/image";
 import type { FC } from "react";
+import { useAccount } from "wagmi";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -22,6 +23,8 @@ type Props = {
 export const TradeDialog: FC<Props> = (props) => {
 	const { tokenId: tokenIdToBurn, tokenBalance } = props;
 
+	const { address } = useAccount();
+
 	const { tradeCall, isPending, isConfirming } = useTrade({
 		tokenIdToBurn,
 	});
@@ -29,7 +32,11 @@ export const TradeDialog: FC<Props> = (props) => {
 	return (
 		<Dialog>
 			<DialogTrigger asChild>
-				<Button variant="secondary" className="w-16" disabled={!tokenBalance}>
+				<Button
+					variant="secondary"
+					className="w-16"
+					disabled={!tokenBalance || !address}
+				>
 					{isPending || isConfirming ? (
 						<LoaderIcon className="animate-spin" />
 					) : (
@@ -37,19 +44,17 @@ export const TradeDialog: FC<Props> = (props) => {
 					)}
 				</Button>
 			</DialogTrigger>
-			<DialogContent className="w-[432px]">
+			<DialogContent className="w-fit max-w-[80vw]">
 				<DialogHeader className="flex">
-					<DialogTitle className="hidden sr-only">Burn</DialogTitle>
-					<div className="grid grid-cols-2 gap-x-2">
-						<div>
-							<div className="relative w-36 min-h-36 flex-1">
-								<Image
-									src={`/tokens/${tokenIdToBurn}.webp`}
-									alt="Token Image"
-									fill
-									className="rounded-lg object-cover"
-								/>
-							</div>
+					<DialogTitle className="hidden sr-only">Burn to trade</DialogTitle>
+					<div className="flex flex-col justify-center items-center sm:flex-row gap-4">
+						<div className="relative w-full sm:w-36 min-h-36 flex-1 max-sm:mt-4 rounded-md ">
+							<Image
+								src={`/tokens/${tokenIdToBurn}.webp`}
+								alt="Token Image"
+								fill
+								className="rounded-md object-cover"
+							/>
 						</div>
 						<TradeForm
 							onTrade={tradeCall}
