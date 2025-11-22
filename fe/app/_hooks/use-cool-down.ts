@@ -1,59 +1,44 @@
 "use client";
+
 import { useEffect, useMemo } from "react";
 import { useReadContract } from "wagmi";
 import { forgeContractConfig } from "../_contracts/forge-contract-config";
 import { useTokens } from "./use-tokens";
 
-type ParamsT = {
-	isBaseToken: boolean;
-	isMintError: Error | null;
-	isMintConfirmed: boolean;
-};
+type Params = {
+	isBaseToken: boolean
+	isMintError: Error | null
+	isMintConfirmed: boolean
+}
 
-export const useCoolDown = (params: ParamsT) => {
-	const { isBaseToken, isMintError, isMintConfirmed } = params;
+export const useCoolDown = (params: Params) => {
+  const { isBaseToken, isMintError, isMintConfirmed } = params
 
-	const { setIsCoolDown } = useTokens();
+  const { setIsCoolDown, setCoolDownEndTime } = useTokens();
 
-	// Fetch cooldown delay from contract
-	const { data: coolDownDelay } = useReadContract({
-		...forgeContractConfig,
-		functionName: "I_COOL_DOWN_DELAY",
-	});
+  const { data: coolDownDelay } = useReadContract({
+    ...forgeContractConfig,
+    functionName: "I_COOL_DOWN_DELAY",
+  });
 
-	// Convert cooldown delay to milliseconds
-	const coolDownDelayInMs: number | null = useMemo(() => {
-		return coolDownDelay ? Number(coolDownDelay) * 1000 : null;
-	}, [coolDownDelay]);
+  const coolDownDelayInMs = useMemo(
+    () => (coolDownDelay ? Number(coolDownDelay) * 1000 : null),
+    [coolDownDelay]
+  );
 
-	// Handle cooldown logic
-	useEffect(() => {
-		if (!isBaseToken || !coolDownDelayInMs) return;
+  useEffect(() => {
+    if (!isBaseToken || !coolDownDelayInMs) return;
 
-		// Reset cooldown on error
-		if (isMintError) {
-			setIsCoolDown(false);
-			return;
-		}
+    if (isMintError) {
+      setIsCoolDown(false);
+      setCoolDownEndTime(null);
+      return;
+    }
 
-		// Start cooldown timer only after transaction is confirmed
-		if (isMintConfirmed) {
-			setIsCoolDown(true);
-			const timer = setTimeout(() => {
-				setIsCoolDown(false);
-			}, coolDownDelayInMs);
+    if (isMintConfirmed) {
+      setIsCoolDown(true);
+      setCoolDownEndTime(Date.now() + coolDownDelayInMs);
+    }
+  }, [isBaseToken, isMintError, isMintConfirmed, coolDownDelayInMs, setIsCoolDown, setCoolDownEndTime]);
 
-			return () => {
-				clearTimeout(timer);
-			};
-		}
-	}, [
-		isBaseToken,
-		isMintError,
-		isMintConfirmed,
-		coolDownDelayInMs,
-		setIsCoolDown,
-	]);
-
-	return coolDownDelayInMs ? coolDownDelayInMs / 1000 : null;
 };

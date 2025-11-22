@@ -57,7 +57,7 @@ export const Hero = () => {
 				className="relative z-10 max-sm:mt-12 mt-8 flex flex-wrap items-center justify-center gap-4"
 			>
 				<Button asChild size={"lg"}>
-					<Link href="#tokenCards">Explore</Link>
+					<Link href="#cards">Explore</Link>
 				</Button>
 			</motion.div>
 		</section>
