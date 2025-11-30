@@ -1,4 +1,5 @@
 import { EventsWatcher } from "./_components/events-watcher";
+import { GameRules } from "./_components/game-rules";
 import { Hero } from "./_components/hero";
 import { TokenCard } from "./_components/token-card";
 import { TokensProvider } from "./_context/tokens-provider";
@@ -25,6 +26,10 @@ export default function Home() {
 						</EventsWatcher>
 					</TokensProvider>
 				</ul>
+			</section>
+
+			<section id={"game-rules"} className="scroll-mt-4">
+				<GameRules />
 			</section>
 		</main>
 	);

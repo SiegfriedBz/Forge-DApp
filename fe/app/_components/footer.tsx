@@ -7,13 +7,15 @@ const ADMIN_LINK = process.env.ADMIN_LINK ?? "https://github.com/SiegfriedBz";
 
 export const Footer: FC = () => {
 	return (
-		<footer className="flex py-8 pb-12 gap-2 flex-wrap items-center justify-center">
-			<TypographyH6 className="font-semibold">
-				© {new Date().getFullYear()}
-			</TypographyH6>
-			<Link href={"/"} scroll>
-				<TypographyH6 className="font-semibold">Forge</TypographyH6>
-			</Link>
+		<footer className="flex py-8 gap-2 flex-col items-center justify-center">
+			<div className="flex gap-2">
+				<TypographyH6 className="font-semibold">
+					© {new Date().getFullYear()}
+				</TypographyH6>
+				<Link href={"/"} scroll>
+					<TypographyH6 className="font-semibold">Forge</TypographyH6>
+				</Link>
+			</div>
 
 			<a href={ADMIN_LINK} className="group">
 				<span className="inline-flex items-center gap-1">
