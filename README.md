@@ -1,64 +1,96 @@
 [![Live Demo](https://img.shields.io/badge/Live-Demo-blue)](https://forge-tokens.vercel.app)
+![CI-Foundry](https://github.com/SiegfriedBz/Forge-DApp/actions/workflows/foundry-tests.yml/badge.svg)
 ![Foundry](https://img.shields.io/badge/Foundry-Tested-informational)
 ![Coverage](https://img.shields.io/badge/Coverage-100%25-brightgreen)
 
-# ⚒️  Forge: Atomic Asset Composition & State-Evolution Protocol
+# ⚒️ Forge — Atomic Asset Composition on ERC-1155
 
-**Forge** is a high-integrity reference implementation of a multi-tier asset evolution system built on **ERC-1155**. It demonstrates complex on-chain state transitions where higher-tier assets are synthesized through the atomic burning of base-layer primitives (batch burn + mint in one transaction for forged IDs).
-
-This project is a **rigor proof**: a fully tested Foundry suite, timed state locks (cooldowns) for basic mints, multi-token burn-and-mint cycles for forging, and a frontend that syncs to on-chain events in near real time.
-
-> I built Forge to challenge myself with full-stack Web3: **Solidity** + **Foundry** for game logic, and **Next.js** + **Wagmi** for a production-style dApp with **real-time** chain updates.
+A multi-tier ERC-1155 protocol on **Ethereum Sepolia**. Players mint base-layer tokens (IDs 0-2) under a per-address cooldown and combine them into higher-tier composites (IDs 3-6) via a single-transaction burn-and-mint. Logic and asset are split between [`Forge.sol`](be/src/Forge.sol) and [`FToken.sol`](be/src/FToken.sol): the `Forge` contract is the immutable owner of `FToken`, so all supply changes flow through one place.
 
 ---
 
-## Architectural overview
+## Quick Start
+
+1. Open the **[live demo](https://forge-tokens.vercel.app)**.
+2. Connect a wallet on **Ethereum Sepolia**.
+3. **Mint basics** (IDs 0-2, 15-second cooldown per address) to assemble inputs.
+4. **Forge composites** (IDs 3-6) by spending the right recipe, **trade** any token for a basic, or **burn** a forged token.
+
+Need testnet ETH? [Sepolia Faucet](https://sepolia-faucet.pk910.de/)
+
+---
+
+## Features in Action
+
+### Minting basic tokens (0-2)
+
+Cooldown-gated mint of the base layer. Each call mints exactly one token.
+
+![Minting Tokens](./assets/desktop-mint.01.gif)
+
+### Trading any token for a basic
+
+Burn one token to receive exactly one of token 0, 1, or 2 (cannot trade into the same id).
+
+![Trading Tokens](./assets/desktop-trade.02.gif)
+
+### Forging composites (3-6) via atomic burn-mint
+
+`burnBatch` consumes the recipe and `mint` issues the composite, both in one transaction.
+
+![Forging Tokens](./assets/desktop-forge.03.gif)
+
+### Burning forged tokens
+
+Only forged IDs (3-6) can be destroyed via `Forge.burn`; basic IDs are protected.
+
+![Burning Tokens](./assets/desktop-burn.04.gif)
+
+### Mobile experience
+
+The same flows on a small viewport.
+
+![Mobile Mint](./assets/mobile-mint.gif)
+
+---
+
+## Architecture
+
+Two contracts, one ledger. `Forge` holds the rules; `FToken` holds the balances. Nothing else can mint or burn.
 
 | Layer | Role |
-| ----- | ---- |
-| **`Forge`** | Game logic: mint (basic), forge (composite), burn (forged only), trade (any → basic), cooldown admin |
-| **`FToken`** | ERC-1155 asset ledger; mint/burn entry points restricted to the owning `Forge` contract |
+|-------|------|
+| [`Forge`](be/src/Forge.sol) | Game logic: mint (basic 0-2), forge (composite 3-6), burn (forged only), trade (any → basic), cooldown admin |
+| [`FToken`](be/src/FToken.sol) | ERC-1155 asset ledger; `mint` / `burn` / `burnBatch` restricted to the owning `Forge` |
 
-On deploy, `Forge` constructs `FToken` and becomes its immutable owner, so all supply changes flow through `Forge`—a clear separation between **logic** and **asset**.
-
----
-
-## Engineering rigor & security
+### Design and security
 
 | Principle | Implementation |
-| --------- | -------------- |
-| **Atomic composition** | For IDs 3–6, `mint` calls `burnBatch` then `mint` in one transaction—no half-updated balances. |
+|-----------|----------------|
+| **Atomic composition** | For IDs 3-6, `mint` calls `burnBatch` then `mint` in one transaction — no half-updated balances. |
 | **Checks-Effects-Interactions** | Basic mint updates `userCoolDownTimer` before the external `I_TOKEN.mint` call (see `Forge.mint` in [`be/src/Forge.sol`](be/src/Forge.sol)). |
 | **State-gated minting (basic)** | `mapping(address => uint256) userCoolDownTimer` enforces a per-address cooldown (default **15s**, set in [`be/script/Forge_Constants.sol`](be/script/Forge_Constants.sol)). |
 | **Access control** | `FToken.mint` / `burn` / `burnBatch` use `onlyOwner`; only the deployed `Forge` address can mutate supply. |
-| **Exhaustive tests** | Foundry tests in [`be/test/`](be/test/) cover mint, forge, burn, trade, cooldowns, admin paths, and revert cases. |
+| **Restricted trade and burn** | `trade(burn, mint)` enforces `_tokenIdToBurn != _tokenIdToMint` and requires `_tokenIdToMint ∈ {0, 1, 2}`; `burn` rejects basic IDs so 0-2 cannot be destroyed outside the recipe path. |
+| **Foundry tests** | Tests in [`be/test/`](be/test/) cover mint, forge, burn, trade, cooldowns, admin paths, and revert cases (100% coverage). |
 
----
+### Event-driven UI
 
-## Coverage report (verifiable locally)
+The frontend uses `watchContractEvent` over an Alchemy WebSocket to subscribe to `Forge__MintToken`, `Forge__ForgeToken`, `Forge__BurnToken`, and `Forge__Trade`, then invalidates per-token TanStack Query caches so balances and forgeability update in near real time without polling. See [`fe/app/_hooks/_events/use-mint-events.ts`](fe/app/_hooks/_events/use-mint-events.ts) and its siblings.
 
-```bash
-cd be && forge coverage
-```
+### Token catalog and recipes
 
-<details>
-  <summary><strong>View coverage report (100%)</strong></summary>
+Seven token IDs (0-6). Base layer **0-2** mints with cooldown; composite **3-6** require the exact burn recipe below.
 
-| File                          | Lines            | Statements       | Branches         | Funcs            |
-| ----------------------------- | ---------------- | ---------------- | ---------------- | ---------------- |
-| **script/FTokenScript.s.sol** | 100% (6/6)       | 100% (5/5)       | 100% (0/0)       | 100% (1/1)       |
-| **script/ForgeScript.s.sol**  | 100% (6/6)       | 100% (5/5)       | 100% (0/0)       | 100% (1/1)       |
-| **src/FToken.sol**            | 100% (16/16)     | 100% (11/11)     | 100% (1/1)       | 100% (7/7)       |
-| **src/Forge.sol**             | 100% (67/67)     | 100% (78/78)     | 100% (18/18)     | 100% (8/8)       |
-| **Total**                     | **100% (95/95)** | **100% (99/99)** | **100% (19/19)** | **100% (17/17)** |
+| Token IDs | Type | Minting rule |
+|-----------|------|--------------|
+| 0, 1, 2 | Basic | Mint directly (15-second cooldown per address). |
+| 3 | Forged | Burn 1× token 0 + 1× token 1. |
+| 4 | Forged | Burn 1× token 1 + 1× token 2. |
+| 5 | Forged | Burn 1× token 0 + 1× token 2. |
+| 6 | Forged | Burn 1× token 0 + 1× token 1 + 1× token 2. |
 
-</details>
-
----
-
-## System design (asset evolution)
-
-Seven token IDs (0–6). Base layer **0–2** mints with cooldown; composite **3–6** require the exact burn recipe below.
+### System design (asset evolution)
 
 ```mermaid
 graph TD
@@ -82,130 +114,52 @@ graph TD
 
 ---
 
-## Quick start
-
-1. **Demo:** [Live Demo](https://forge-tokens.vercel.app)
-2. **Testnet ETH:** [Sepolia Faucet](https://sepolia-faucet.pk910.de/)
-3. Connect a wallet and play: mint basics (0–2), forge (3–6), trade, or burn forged tokens.
-
----
-
-## Main features
-
-- On-chain token crafting (ERC-1155)
-- Event-driven UI: Alchemy HTTP + WebSocket + Wagmi hooks (`useMintEvents`, `useForgeEvents`, `useBurnEvents`, `useTradeEvents`)
-- Cooldown-based basic minting
-- Wagmi + RainbowKit wallet UX
-- Responsive layout (desktop + mobile)
-- High Foundry coverage on contracts and deploy scripts (see table above)
-- Sepolia deployment + Etherscan-verified contracts (addresses below)
-
----
-
-## Demo previews
-
-### Desktop gameplay
-
-#### 1. Minting basic tokens
-
-![Minting Tokens](./assets/desktop-mint.01.gif)
-
-#### 2. Trading tokens
-
-![Trading Tokens](./assets/desktop-trade.02.gif)
-
-#### 3. Forging rare tokens
-
-![Forging Tokens](./assets/desktop-forge.03.gif)
-
-#### 4. Burning tokens
-
-![Burning Tokens](./assets/desktop-burn.04.gif)
-
-### Mobile preview
-
-#### Minting on mobile
-
-![Mobile Mint](./assets/mobile-mint.gif)
-
----
-
-## Interface & event synchronization
-
-The frontend under [`fe/`](fe/) uses **Next.js 16**, **TypeScript**, **TanStack Query**, and **Wagmi + Viem** with **Alchemy** RPC + WebSocket env vars for responsive refetches after mints, forges, burns, and trades.
-
-| Flow | Behavior |
-| ---- | -------- |
-| **Synthesis (forging)** | Multi-ID `burnBatch` + single mint in one `Forge.mint` call for IDs 3–6 |
-| **Rate-limited minting** | Per-user cooldown on basic mints (0–2) |
-| **Trading** | Burn one token, mint one basic (0–2); same-ID trade blocked on-chain |
-| **Burning** | Only forged IDs 3–6 via `Forge.burn` |
-
----
-
-## Game rules
-
-### 1. Token categories
-
-| Token IDs | Type   | Minting rule |
-| --------- | ------ | ------------ |
-| 0, 1, 2   | Basic  | Mint directly (15 seconds cooldown). |
-| 3, 4, 5, 6 | Forged | Burn specific basic tokens to mint. |
-
-### 2. Minting rules
-
-- **Basic tokens (0, 1, 2):**
-  - **Cooldown:** 15 seconds per user.
-  - **Limit:** 1 token per call.
-
-- **Forged tokens (3, 4, 5, 6):**
-  - **Token 3:** Burn 1× token 0 + 1× token 1.
-  - **Token 4:** Burn 1× token 1 + 1× token 2.
-  - **Token 5:** Burn 1× token 0 + 1× token 2.
-  - **Token 6:** Burn 1× token 0 + 1× token 1 + 1× token 2.
-
-### 3. Burning & trading rules
-
-- Tokens 3–6 can be burned directly.
-- **Trading:** burn any token to mint exactly one of token 0, 1, or 2.
-- Cannot trade a token into itself.
-- Only the **Forge** contract can mint or burn **FToken** supply.
-
----
-
-## Tech stack
-
-### Frontend
-
-| Technology | Purpose |
-| ---------- | ------- |
-| Next.js 16 + TypeScript | App framework |
-| Tailwind + shadcn/ui | Styling and components |
-| Zod + React Hook Form | Forms and validation |
-| React Context | Local UI / token state |
-| TanStack Query | Server/async state and caching |
-| Wagmi + Viem + RainbowKit | Wallets and contract writes |
-| pnpm | Package manager |
-
-### Backend / protocol
+## Tech Stack
 
 | Layer | Technologies |
-| ----- | -------------- |
-| Contracts | Solidity ^0.8.13, Foundry, OpenZeppelin (ERC-1155 + access-control primitives) for gas-optimized batch transfers |
-| Testing | Foundry (`be/test/`) |
-| Metadata | IPFS base URI in [`be/script/Forge_Constants.sol`](be/script/Forge_Constants.sol) |
-| RPC | Alchemy Sepolia (HTTP + WS) via [`be/foundry.toml`](be/foundry.toml) and `fe` env |
+|-------|--------------|
+| Smart contracts | Solidity ^0.8.13, Foundry (build, test, script), OpenZeppelin (ERC-1155) |
+| Frontend | Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4, shadcn/ui (Radix), motion |
+| Web3 client | wagmi v2, viem, RainbowKit, Alchemy RPC + WebSocket |
+| State and forms | TanStack Query v5, React Context (token state), React Hook Form + Zod |
+| Storage / metadata | IPFS base URI in [`be/script/Forge_Constants.sol`](be/script/Forge_Constants.sol) |
+| Quality | Foundry tests (100% coverage), ESLint, GitHub Actions CI ([`.github/workflows/foundry-tests.yml`](.github/workflows/foundry-tests.yml)) |
 
 ---
 
-## Contracts (Sepolia)
+## Test Metrics
 
-- **Forge:** [0xd4922b783f762feb81ceb08d6f1f4c45a8caa148](https://sepolia.etherscan.io/address/0xd4922b783f762feb81ceb08d6f1f4c45a8caa148#code) *(verified)*
-- **FToken (ERC-1155):** [0x8281b01D35A70BDc17D85c6df3d45B67745a5F9f](https://sepolia.etherscan.io/address/0x8281b01D35A70BDc17D85c6df3d45B67745a5F9f#code) *(verified)*
+100% across lines, statements, branches, and functions on both contracts and deploy scripts. CI runs `forge test -vvv` on every push and PR to `main`/`develop` ([`.github/workflows/foundry-tests.yml`](.github/workflows/foundry-tests.yml)).
+
+```bash
+cd be && forge install
+cd be && forge test --gas-report
+cd be && forge coverage
+```
+
+<details>
+  <summary><strong>View coverage report (100%)</strong></summary>
+
+| File                          | Lines            | Statements       | Branches         | Funcs            |
+| ----------------------------- | ---------------- | ---------------- | ---------------- | ---------------- |
+| **script/FTokenScript.s.sol** | 100% (6/6)       | 100% (5/5)       | 100% (0/0)       | 100% (1/1)       |
+| **script/ForgeScript.s.sol**  | 100% (6/6)       | 100% (5/5)       | 100% (0/0)       | 100% (1/1)       |
+| **src/FToken.sol**            | 100% (16/16)     | 100% (11/11)     | 100% (1/1)       | 100% (7/7)       |
+| **src/Forge.sol**             | 100% (67/67)     | 100% (78/78)     | 100% (18/18)     | 100% (8/8)       |
+| **Total**                     | **100% (95/95)** | **100% (99/99)** | **100% (19/19)** | **100% (17/17)** |
+
+</details>
 
 ---
 
-## Setup & deployment
+## Setup (Deployment and Verification)
+
+### Deployed addresses (Sepolia)
+
+| Contract | Address |
+|----------|---------|
+| Forge | [`0xd4922b783f762feb81ceb08d6f1f4c45a8caa148`](https://sepolia.etherscan.io/address/0xd4922b783f762feb81ceb08d6f1f4c45a8caa148#code) *(verified)* |
+| FToken (ERC-1155) | [`0x8281b01D35A70BDc17D85c6df3d45B67745a5F9f`](https://sepolia.etherscan.io/address/0x8281b01D35A70BDc17D85c6df3d45B67745a5F9f#code) *(verified)* |
 
 ### Clone
 
@@ -213,7 +167,7 @@ The frontend under [`fe/`](fe/) uses **Next.js 16**, **TypeScript**, **TanStack 
 git clone git@github.com:SiegfriedBz/Forge-DApp.git
 ```
 
-### Backend (Foundry)
+### Contracts
 
 Deployment constants (`TOKEN_URI`, `MAX_TOKEN_ID`, `COOL_DOWN_DELAY`) live in [`be/script/Forge_Constants.sol`](be/script/Forge_Constants.sol).
 
@@ -225,7 +179,7 @@ ETHERSCAN_API_KEY=
 PRIVATE_KEY=
 ```
 
-Deploy and verify:
+Deploy and verify (`ForgeScript` deploys `Forge`, which constructs `FToken` automatically — no separate `FTokenScript` deploy needed):
 
 ```bash
 cd be
@@ -235,15 +189,7 @@ forge script script/ForgeScript.s.sol \
   --verify
 ```
 
-This deploys **`Forge.sol`** (which deploys **`FToken.sol`**).
-
-Install deps and run tests (CI-style):
-
-```bash
-cd be && forge install && forge test -vvv --gas-report
-```
-
-### Frontend (Next.js)
+### Frontend
 
 Create `fe/.env`:
 
@@ -253,7 +199,7 @@ NEXT_PUBLIC_ETH_SEPOLIA_ALCHEMY_WS_URL=
 NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=
 ```
 
-After deploy, update [`fe/app/_contracts/`](fe/app/_contracts/) with the latest ABIs and addresses from your broadcast output.
+After deploying, sync ABIs and addresses in [`fe/app/_contracts/`](fe/app/_contracts/) from your broadcast output, then:
 
 ```bash
 cd fe
@@ -263,20 +209,17 @@ pnpm dev
 
 ---
 
-## Industrial relevance
+## Future Roadmap
 
-This pattern maps to:
-
-- **DeFi / aggregators** — Composing positions via enforced burn-mint or swap-like flows.
-- **Supply chain traceability** — Raw inputs (IDs 0–2) becoming finished goods (IDs 3–6) with explicit consumption rules.
-- **On-chain resource allocation** — Decentralized rate limits (cooldowns) and spam resistance without a centralized API.
-- **Batch operations** — ERC-1155 `burnBatch` enables atomic multi-token state changes in a single transaction (see Forge IDs 3–6 path).
+- **L2 convergence.** Deploy to Arbitrum or Base to compare gas cost on the `burnBatch + mint` paths against Sepolia.
+- **Per-token cooldowns.** Extend the global `coolDownDelay` into per-id and progressive cooldowns to allow finer control over each token's supply curve.
+- **Marketplace integration.** Plug `FToken` into a generic ERC-1155 marketplace so secondary trading complements the in-protocol `trade` (basic-only).
 
 ---
 
 ## Author
 
-**Siegfried Bozza** · M.Sc / M.Eng · Full-stack & Web3 builder.
+**Siegfried Bozza** · M.Sc / M.Eng · Full-stack Web3 engineer.
 
 _Forge_ was built solo, alongside a full-time full-stack job (frontend, contracts, tests, deployment).
 
