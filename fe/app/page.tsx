@@ -1,9 +1,9 @@
-import { EventsWatcher } from "./_components/events-watcher";
-import { GameRules } from "./_components/game-rules";
-import { Hero } from "./_components/hero";
-import { TokenCard } from "./_components/token-card";
-import { TokensProvider } from "./_context/tokens-provider";
-import { tokensData } from "./_data/tokens";
+import { EventsWatcher } from "./_components/events-watcher"
+import { GameRules } from "./_components/game-rules"
+import { Hero } from "./_components/hero"
+import { TokenCard } from "./_components/token-card"
+import { TokensProvider } from "./_context/tokens-provider"
+import { tokensData } from "./_data/tokens"
 
 export default function Home() {
 	return (
@@ -21,7 +21,7 @@ export default function Home() {
 									<li key={token.id}>
 										<TokenCard {...token} />
 									</li>
-								);
+								)
 							})}
 						</EventsWatcher>
 					</TokensProvider>
@@ -32,5 +32,5 @@ export default function Home() {
 				<GameRules />
 			</section>
 		</main>
-	);
+	)
 }
