@@ -3,18 +3,26 @@
 ![Foundry](https://img.shields.io/badge/Foundry-Tested-informational)
 ![Coverage](https://img.shields.io/badge/Coverage-100%25-brightgreen)
 
-# ⚒️ Forge — Atomic Asset Composition on ERC-1155
+# Forge — A Web3 Token-Composition Case Study
 
-A multi-tier ERC-1155 protocol on **Ethereum Sepolia**. Players mint base-layer tokens (IDs 0-2) under a per-address cooldown and combine them into higher-tier composites (IDs 3-6) via a single-transaction burn-and-mint. Logic and asset are split between [`Forge.sol`](be/src/Forge.sol) and [`FToken.sol`](be/src/FToken.sol): the `Forge` contract is the immutable owner of `FToken`, so all supply changes flow through one place.
+Forge is an **Ethereum Sepolia** DApp built around **ERC-1155** crafting: mint three base materials (token IDs **0–2**) under a per-address cooldown, **forge** composites (**3–6**) with a single-transaction **burn-then-mint**, optionally **trade** any held id back into a basic, or **burn** forged ids only. Rules live in [`Forge.sol`](be/src/Forge.sol); balances live in [`FToken.sol`](be/src/FToken.sol), which only the deployed `Forge` can mint or burn.
 
 ---
 
-## Quick Start
+## Why
+
+ERC-1155 is a practical standard when one contract needs to represent many fungible and semi-fungible ids. A natural follow-up question is how to keep **composition rules** and **supply mutations** honest when recipes get non-trivial: who is allowed to mint, and how do you avoid half-applied state when burning inputs and minting outputs?
+
+Forge is an experiment in that direction. It keeps the **ledger** (`FToken`) supply-focused and the **rules** (`Forge`) explicit: every supply change routes through `Forge`, which encodes cooldowns, recipes, trade constraints, and burn permissions. The UI is a **single-page** app so contracts and UI stay easy to read, reason about, and test together.
+
+---
+
+## Try the Live Demo
 
 1. Open the **[live demo](https://forge-tokens.vercel.app)**.
 2. Connect a wallet on **Ethereum Sepolia**.
-3. **Mint basics** (IDs 0-2, 15-second cooldown per address) to assemble inputs.
-4. **Forge composites** (IDs 3-6) by spending the right recipe, **trade** any token for a basic, or **burn** a forged token.
+3. **Mint basics** (IDs 0–2, **15-second** cooldown per address) to assemble inputs.
+4. **Forge composites** (IDs 3–6) by spending the right recipe, **trade** any token for exactly one basic (0, 1, or 2), or **burn** a forged token (3–6 only).
 
 Need testnet ETH? [Sepolia Faucet](https://sepolia-faucet.pk910.de/)
 
@@ -22,7 +30,7 @@ Need testnet ETH? [Sepolia Faucet](https://sepolia-faucet.pk910.de/)
 
 ## Features in Action
 
-### Minting basic tokens (0-2)
+### Minting basic tokens (0–2)
 
 Cooldown-gated mint of the base layer. Each call mints exactly one token.
 
@@ -34,7 +42,7 @@ Burn one token to receive exactly one of token 0, 1, or 2 (cannot trade into the
 
 ![Trading Tokens](./assets/desktop-trade.02.gif)
 
-### Forging composites (3-6) via atomic burn-mint
+### Forging composites (3–6) via atomic burn-mint
 
 `burnBatch` consumes the recipe and `mint` issues the composite, both in one transaction.
 
@@ -42,94 +50,91 @@ Burn one token to receive exactly one of token 0, 1, or 2 (cannot trade into the
 
 ### Burning forged tokens
 
-Only forged IDs (3-6) can be destroyed via `Forge.burn`; basic IDs are protected.
+Only forged IDs (3–6) can be destroyed via `Forge.burn`; basic IDs are protected.
 
 ![Burning Tokens](./assets/desktop-burn.04.gif)
 
 ### Mobile experience
 
-The same flows on a small viewport.
+The same flows on narrow and mobile viewports.
 
 ![Mobile Mint](./assets/mobile-mint.gif)
 
 ---
 
-## Architecture
+## How It Works
 
-Two contracts, one ledger. `Forge` holds the rules; `FToken` holds the balances. Nothing else can mint or burn.
+Two contracts, one ledger: **`Forge`** encodes behavior; **`FToken`** stores ERC-1155 balances. Only `Forge` (as immutable owner of `FToken`) can call `mint`, `burn`, or `burnBatch` on the token contract.
 
-| Layer | Role |
-|-------|------|
-| [`Forge`](be/src/Forge.sol) | Game logic: mint (basic 0-2), forge (composite 3-6), burn (forged only), trade (any → basic), cooldown admin |
-| [`FToken`](be/src/FToken.sol) | ERC-1155 asset ledger; `mint` / `burn` / `burnBatch` restricted to the owning `Forge` |
+| Component | Role |
+|-----------|------|
+| [`Forge`](be/src/Forge.sol) | Mint basics (0–2), forge composites (3–6), burn forged only, trade (any id → one basic), owner-only cooldown tuning |
+| [`FToken`](be/src/FToken.sol) | ERC-1155 ledger; supply mutations restricted to the owning `Forge` |
 
-### Design and security
+### Design choices
 
-| Principle | Implementation |
-|-----------|----------------|
-| **Atomic composition** | For IDs 3-6, `mint` calls `burnBatch` then `mint` in one transaction — no half-updated balances. |
-| **Checks-Effects-Interactions** | Basic mint updates `userCoolDownTimer` before the external `I_TOKEN.mint` call (see `Forge.mint` in [`be/src/Forge.sol`](be/src/Forge.sol)). |
-| **State-gated minting (basic)** | `mapping(address => uint256) userCoolDownTimer` enforces a per-address cooldown (default **15s**, set in [`be/script/Forge_Constants.sol`](be/script/Forge_Constants.sol)). |
-| **Access control** | `FToken.mint` / `burn` / `burnBatch` use `onlyOwner`; only the deployed `Forge` address can mutate supply. |
-| **Restricted trade and burn** | `trade(burn, mint)` enforces `_tokenIdToBurn != _tokenIdToMint` and requires `_tokenIdToMint ∈ {0, 1, 2}`; `burn` rejects basic IDs so 0-2 cannot be destroyed outside the recipe path. |
-| **Foundry tests** | Tests in [`be/test/`](be/test/) cover mint, forge, burn, trade, cooldowns, admin paths, and revert cases (100% coverage). |
+| Topic | What the code does |
+|-------|---------------------|
+| **Atomic forging** | For IDs 3–6, `Forge.mint` calls `I_TOKEN.burnBatch` then `I_TOKEN.mint` in one transaction so balances do not end up half-updated on success paths. |
+| **Cooldown (basics)** | `mapping(address => uint256) userCoolDownTimer` gates mints for ids 0–2. Default delay is **15 seconds** in [`be/script/Forge_Constants.sol`](be/script/Forge_Constants.sol). |
+| **Access control** | `FToken` uses `onlyOwner` on `mint` / `burn` / `burnBatch`; in the intended deployment, owner is `Forge`. |
+| **Trade and burn rules** | `trade` requires `_tokenIdToBurn != _tokenIdToMint` and `_tokenIdToMint ∈ {0,1,2}`. `burn` rejects basic ids so 0–2 are not destroyed via that path. |
+| **Tests** | Foundry tests under [`be/test/`](be/test/) cover mint, forge, burn, trade, cooldowns, admin paths, and revert cases. |
 
 ### Event-driven UI
 
-The frontend uses `watchContractEvent` over an Alchemy WebSocket to subscribe to `Forge__MintToken`, `Forge__ForgeToken`, `Forge__BurnToken`, and `Forge__Trade`, then invalidates per-token TanStack Query caches so balances and forgeability update in near real time without polling. See [`fe/app/_hooks/_events/use-mint-events.ts`](fe/app/_hooks/_events/use-mint-events.ts) and its siblings.
+The app uses `watchContractEvent` (wagmi core) over an **Alchemy WebSocket** transport ([`fe/app/_config/wagmi.ts`](fe/app/_config/wagmi.ts)) to subscribe to all four `Forge` events and invalidate per-token TanStack Query keys without polling:
+
+- `Forge__MintToken` — invalidates the minted token's balance and retriggers forgeability.
+- `Forge__ForgeToken` — invalidates the forged token's balance and all burnt input balances, then retriggers forgeability.
+- `Forge__BurnToken` — invalidates the burnt token's balance.
+- `Forge__Trade` — invalidates both the burnt and minted token balances, then retriggers forgeability.
+
+See [`fe/app/_hooks/_events/use-mint-events.ts`](fe/app/_hooks/_events/use-mint-events.ts) and the sibling hooks in the same folder.
 
 ### Token catalog and recipes
 
-Seven token IDs (0-6). Base layer **0-2** mints with cooldown; composite **3-6** require the exact burn recipe below.
+Seven token IDs (0–6). Base layer **0–2** mint with cooldown; composite **3–6** require the exact burn recipe below (names match the UI copy in [`fe/app/_data/tokens.ts`](fe/app/_data/tokens.ts)).
 
-| Token IDs | Type | Minting rule |
-|-----------|------|--------------|
-| 0, 1, 2 | Basic | Mint directly (15-second cooldown per address). |
-| 3 | Forged | Burn 1× token 0 + 1× token 1. |
-| 4 | Forged | Burn 1× token 1 + 1× token 2. |
-| 5 | Forged | Burn 1× token 0 + 1× token 2. |
-| 6 | Forged | Burn 1× token 0 + 1× token 1 + 1× token 2. |
+| Token IDs | Name (UI) | Rule |
+|-----------|-----------|------|
+| 0, 1, 2 | Iron Ore, Elemental Essence, Crystal Shards | Mint via `Forge.mint` (15s cooldown per address, one token per call). |
+| 3 | Steel Ingot | Burn 1×0 + 1×1. |
+| 4 | Enchanted Crystal | Burn 1×1 + 1×2. |
+| 5 | Reinforced Crystal | Burn 1×0 + 1×2. |
+| 6 | Legendary Core | Burn 1×0 + 1×1 + 1×2. |
 
-### System design (asset evolution)
+### Forging flow
 
 ```mermaid
 graph TD
-    T0(Asset_ID_0) --> F3[Composition_Engine]
-    T1(Asset_ID_1) --> F3
-    F3 -->|"Burn/Mint"| T3(Asset_ID_3)
+    ironOre[IronOre_id0] --> forge3[Forge_mint_id3]
+    elementalEssence[ElementalEssence_id1] --> forge3
+    forge3 -->|"burnBatch_then_mint"| steelIngot[SteelIngot_id3]
 
-    T1 --> F4[Composition_Engine_2]
-    T2(Asset_ID_2) --> F4
-    F4 -->|"Burn/Mint"| T4(Asset_ID_4)
+    elementalEssence --> forge4[Forge_mint_id4]
+    crystalShards[CrystalShards_id2] --> forge4
+    forge4 -->|"burnBatch_then_mint"| enchantedCrystal[EnchantedCrystal_id4]
 
-    T0 --> F5[Composition_Engine_3]
-    T2 --> F5
-    F5 -->|"Burn/Mint"| T5(Asset_ID_5)
+    ironOre --> forge5[Forge_mint_id5]
+    crystalShards --> forge5
+    forge5 -->|"burnBatch_then_mint"| reinforcedCrystal[ReinforcedCrystal_id5]
 
-    T0 --> F6[Composition_Engine_4]
-    T1 --> F6
-    T2 --> F6
-    F6 -->|"Max_Tier_Synthesis"| T6(Asset_ID_6)
+    ironOre --> forge6[Forge_mint_id6]
+    elementalEssence --> forge6
+    crystalShards --> forge6
+    forge6 -->|"burnBatch_then_mint"| legendaryCore[LegendaryCore_id6]
 ```
 
 ---
 
-## Tech Stack
+## Testing
 
-| Layer | Technologies |
-|-------|--------------|
-| Smart contracts | Solidity ^0.8.13, Foundry (build, test, script), OpenZeppelin (ERC-1155) |
-| Frontend | Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4, shadcn/ui (Radix), motion |
-| Web3 client | wagmi v2, viem, RainbowKit, Alchemy RPC + WebSocket |
-| State and forms | TanStack Query v5, React Context (token state), React Hook Form + Zod |
-| Storage / metadata | IPFS base URI in [`be/script/Forge_Constants.sol`](be/script/Forge_Constants.sol) |
-| Quality | Foundry tests (100% coverage), ESLint, GitHub Actions CI ([`.github/workflows/foundry-tests.yml`](.github/workflows/foundry-tests.yml)) |
+Smart-contract tests live under [`be/test/`](be/test/) (`ForgeTest.t.sol`, `FTokenTest.t.sol`) and run with Foundry. The suite is **37 tests** covering deployment, basic mint + cooldown, all forge recipes, insufficient-balance reverts, burn/trade rules, `getForgeData`, and owner-only `setCoolDownDelay`.
 
----
+Tests require **two environment variables**: `MY_ADDRESS` (asserted against `Forge.I_OWNER()` / `FToken.I_OWNER()`) and `PRIVATE_KEY` (used by `ForgeScript` / `FTokenScript` inside `setUp`). Both must be set or the suite will not build. CI injects them from GitHub secrets; locally, either export your deployer key pair or use Foundry's default Anvil pair (`MY_ADDRESS=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266`, `PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80`) for a quick run.
 
-## Test Metrics
-
-100% across lines, statements, branches, and functions on both contracts and deploy scripts. CI runs `forge test -vvv` on every push and PR to `main`/`develop` ([`.github/workflows/foundry-tests.yml`](.github/workflows/foundry-tests.yml)).
+**Coverage (local):** `forge coverage` reports **100%** lines, statements, branches, and functions on the project-owned contracts and deploy scripts (see table below). **CI** runs `forge test -vvv` on every push and PR to `main` / `develop` — it does **not** run `forge coverage` automatically ([`.github/workflows/foundry-tests.yml`](.github/workflows/foundry-tests.yml)).
 
 ```bash
 cd be && forge install
@@ -152,14 +157,29 @@ cd be && forge coverage
 
 ---
 
-## Setup (Deployment and Verification)
+## Tech Stack
 
-### Deployed addresses (Sepolia)
+| Layer | Technologies |
+|-------|--------------|
+| Smart contracts | Solidity ^0.8.13, Foundry (build, test, script), OpenZeppelin ERC-1155 |
+| Frontend | Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4, shadcn/ui (Radix) |
+| Web3 client | wagmi v2, viem, RainbowKit, Alchemy HTTP + WebSocket |
+| State and forms | TanStack Query v5, React Context ([`fe/app/_context/tokens-provider.tsx`](fe/app/_context/tokens-provider.tsx)), React Hook Form + Zod |
+| Metadata | IPFS base URI in [`be/script/Forge_Constants.sol`](be/script/Forge_Constants.sol); local metadata files named `0`–`6` (no extension, JSON content) under [`ipfs-data/metadata/`](ipfs-data/metadata/) |
+| Quality | Foundry tests (100% coverage locally), ESLint, GitHub Actions |
+
+---
+
+## Setup (deploy and run locally)
+
+### Deployed addresses (Sepolia) — matches the live frontend
+
+These are the addresses wired into [`fe/app/_contracts/forge-contract-config.ts`](fe/app/_contracts/forge-contract-config.ts) and [`fe/app/_contracts/ftoken-contract-config.ts`](fe/app/_contracts/ftoken-contract-config.ts). After a new deploy, update those files (and this table) so the hosted app and docs stay aligned.
 
 | Contract | Address |
 |----------|---------|
-| Forge | [`0xd4922b783f762feb81ceb08d6f1f4c45a8caa148`](https://sepolia.etherscan.io/address/0xd4922b783f762feb81ceb08d6f1f4c45a8caa148#code) *(verified)* |
-| FToken (ERC-1155) | [`0x8281b01D35A70BDc17D85c6df3d45B67745a5F9f`](https://sepolia.etherscan.io/address/0x8281b01D35A70BDc17D85c6df3d45B67745a5F9f#code) *(verified)* |
+| Forge | [`0x7d8A16168D337B2241fCbA1cc5bd196479DF1F0C`](https://sepolia.etherscan.io/address/0x7d8A16168D337B2241fCbA1cc5bd196479DF1F0C#code) |
+| FToken (ERC-1155) | [`0xa6D68eDA0993364481C2c5DA8d6cd43e03f592bA`](https://sepolia.etherscan.io/address/0xa6D68eDA0993364481C2c5DA8d6cd43e03f592bA#code) |
 
 ### Clone
 
@@ -179,7 +199,7 @@ ETHERSCAN_API_KEY=
 PRIVATE_KEY=
 ```
 
-Deploy and verify (`ForgeScript` deploys `Forge`, which constructs `FToken` automatically — no separate `FTokenScript` deploy needed):
+Deploy and verify (`ForgeScript` deploys `Forge`, which constructs `FToken` — no separate `FTokenScript` needed for the main app path):
 
 ```bash
 cd be
@@ -191,7 +211,7 @@ forge script script/ForgeScript.s.sol \
 
 ### Frontend
 
-Create `fe/.env`:
+Create `fe/.env` (see [`fe/.env.example`](fe/.env.example)):
 
 ```bash
 NEXT_PUBLIC_ETH_SEPOLIA_ALCHEMY_HTTP_URL=
@@ -209,19 +229,18 @@ pnpm dev
 
 ---
 
-## Future Roadmap
+## Possible extensions
 
-- **L2 convergence.** Deploy to Arbitrum or Base to compare gas cost on the `burnBatch + mint` paths against Sepolia.
-- **Per-token cooldowns.** Extend the global `coolDownDelay` into per-id and progressive cooldowns to allow finer control over each token's supply curve.
-- **Marketplace integration.** Plug `FToken` into a generic ERC-1155 marketplace so secondary trading complements the in-protocol `trade` (basic-only).
+- **L2 deployment comparison** — Deploy the same `Forge`/`FToken` pattern to an L2 testnet and compare gas on `burnBatch` + `mint` paths vs Sepolia.
+- **Per-token or progressive cooldowns** — Replace the single `coolDownDelay` with per-id tuning if you want different issuance curves for each basic.
+- **Secondary marketplace** — Integrate standard ERC-1155 marketplace flows alongside the on-chain `trade` helper (which only mints basics).
 
 ---
 
 ## Author
 
-**Siegfried Bozza** · M.Sc / M.Eng · Full-stack Web3 engineer.
+**Siegfried Bozza** · M.Sc / M.Eng · Full-stack engineer & Web3 builder.
 
-_Forge_ was built solo, alongside a full-time full-stack job (frontend, contracts, tests, deployment).
+Forge was built solo, alongside a full-time full-stack role (frontend, contracts, tests, deployment).
 
-- [LinkedIn](https://www.linkedin.com/in/siegfriedbozza/)
-- [GitHub](https://github.com/SiegfriedBz)
+[LinkedIn](https://www.linkedin.com/in/siegfriedbozza/)
