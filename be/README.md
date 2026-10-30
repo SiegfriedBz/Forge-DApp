@@ -9,7 +9,7 @@ What they do, the known limitations and the deployed addresses are in the [root 
 
 ## Commands
 
-The tests read `MY_ADDRESS` and `PRIVATE_KEY`. Use Foundry's default Anvil pair locally (see the root README), never a key that holds real funds.
+The tests need no keys: `setUp` derives a throwaway deployer key with `makeAddrAndKey` and passes it to the deploy script.
 
 ```bash
 forge install

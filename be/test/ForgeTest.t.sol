@@ -22,11 +22,15 @@ contract ForgeTest is Test, Forge_Constants {
     Forge public forge;
     FToken public token;
 
-    address owner = vm.envAddress("MY_ADDRESS");
+    address owner;
     address player01 = makeAddr("player01");
     address player02 = makeAddr("player02");
 
     function setUp() public {
+        // 0. derive a throwaway deployer key, ForgeScript reads it from PRIVATE_KEY
+        uint256 ownerKey;
+        (owner, ownerKey) = makeAddrAndKey("owner");
+        vm.setEnv("PRIVATE_KEY", vm.toString(bytes32(ownerKey)));
         // 1. deploy Forge deployer
         forgeDeployer = new ForgeScript();
         // 2. deploy Forge

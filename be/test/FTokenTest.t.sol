@@ -16,10 +16,14 @@ contract FTokenTest is Test, FToken_Constants {
     FTokenScript public tokenDeployer;
     FToken public token;
 
-    address owner = vm.envAddress("MY_ADDRESS");
+    address owner;
     address player01 = makeAddr("player01");
 
     function setUp() public {
+        // 0. derive a throwaway deployer key, FTokenScript reads it from PRIVATE_KEY
+        uint256 ownerKey;
+        (owner, ownerKey) = makeAddrAndKey("owner");
+        vm.setEnv("PRIVATE_KEY", vm.toString(bytes32(ownerKey)));
         // 1. deploy FToken deployer
         tokenDeployer = new FTokenScript();
         // 2. deploy FToken

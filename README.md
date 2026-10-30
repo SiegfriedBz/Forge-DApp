@@ -133,9 +133,7 @@ graph TD
 
 Smart-contract tests live under [`be/test/`](be/test/) (`ForgeTest.t.sol`, `FTokenTest.t.sol`) and run with Foundry. The suite is **37 tests** covering deployment, basic mint + cooldown, all forge recipes, insufficient-balance reverts, burn/trade rules, `getForgeData`, and owner-only `setCoolDownDelay`.
 
-Tests require **two environment variables**: `MY_ADDRESS` (asserted against `Forge.I_OWNER()` / `FToken.I_OWNER()`) and `PRIVATE_KEY` (used by `ForgeScript` / `FTokenScript` inside `setUp`). Both must be set or the suite will not build. CI injects them from GitHub secrets; locally, use Foundry's default Anvil pair (`MY_ADDRESS=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266`, `PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80`) for a quick run.
-
-The tests need `MY_ADDRESS` and `PRIVATE_KEY` today; that is a known issue (see [Known limitations](#known-limitations)). For a local run, use Foundry's default Anvil pair above, never a key that holds real funds.
+The tests need no environment variables or secrets: `setUp` derives a throwaway deployer key with `makeAddrAndKey` and hands it to the real deploy script through `PRIVATE_KEY`, so CI runs without GitHub secrets.
 
 **Coverage (local run):** `forge coverage` reported **100%** of lines, statements, branches and functions on the two contracts and the two deploy scripts (table below). That is 37 unit tests, with no fuzz or invariant tests, and `trade` has a single happy-path test. **CI** runs `forge test -vvv` on every push and PR to `main` / `develop`; it does **not** run `forge coverage` ([`.github/workflows/foundry-tests.yml`](.github/workflows/foundry-tests.yml)).
 
@@ -239,7 +237,6 @@ pnpm dev
 - **Trade.** `trade` does not bound-check the ID it burns and allows basic-to-basic swaps with no cooldown.
 - **The cooldown is per address**, so it is not Sybil-resistant. The UI countdown uses the browser clock and never reads `userCoolDownTimer`.
 - **Event watchers** do not filter by user and read only the first log.
-- **Tests need a key.** The suite reads `PRIVATE_KEY` and `MY_ADDRESS` from the environment, and CI passes the deployer's from GitHub secrets. Deriving them in the tests (`vm.addr`, `makeAddr`) would remove that.
 - **No fuzz or invariant tests.**
 
 ## Possible extensions
