@@ -71,7 +71,7 @@ contract Forge {
 
         /**
          * token 0..2 => Mint
-         * 1-minute cooldown between mints
+         * cooldown between mints (coolDownDelay, 15 s on the live deploy)
          * only 1 token can be minted per call
          */
         if (_tokenId == 0 || _tokenId == 1 || _tokenId == 2) {

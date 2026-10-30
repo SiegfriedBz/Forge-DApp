@@ -16,17 +16,22 @@ import {
 import {Forge_Constants} from "../script/Forge_Constants.sol";
 import {ForgeScript} from "../script/ForgeScript.s.sol";
 import {FToken} from "../src/FToken.sol";
+import {IERC1155Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
 
 contract ForgeTest is Test, Forge_Constants {
     ForgeScript public forgeDeployer;
     Forge public forge;
     FToken public token;
 
-    address owner = vm.envAddress("MY_ADDRESS");
+    address owner;
     address player01 = makeAddr("player01");
     address player02 = makeAddr("player02");
 
     function setUp() public {
+        // 0. derive a throwaway deployer key, ForgeScript reads it from PRIVATE_KEY
+        uint256 ownerKey;
+        (owner, ownerKey) = makeAddrAndKey("owner");
+        vm.setEnv("PRIVATE_KEY", vm.toString(bytes32(ownerKey)));
         // 1. deploy Forge deployer
         forgeDeployer = new ForgeScript();
         // 2. deploy Forge
@@ -176,7 +181,7 @@ contract ForgeTest is Test, Forge_Constants {
         vm.startPrank(player01);
 
         forge.mint(0); // Only token 0 (missing token 1 for token 3)
-        vm.expectRevert(abi.encode("ERC1155InsufficientBalance(0x7a802d57d8BB9Cc2367d302f85084e53905A7a98, 0, 1, 1)")); // Reverts (ERC1155: insufficient balance)
+        vm.expectRevert(abi.encodeWithSelector(IERC1155Errors.ERC1155InsufficientBalance.selector, player01, 0, 1, 1)); // Reverts (ERC1155: insufficient balance)
         forge.mint(3);
 
         vm.stopPrank();
@@ -186,7 +191,7 @@ contract ForgeTest is Test, Forge_Constants {
         vm.startPrank(player01);
 
         forge.mint(1);
-        vm.expectRevert(abi.encode("ERC1155InsufficientBalance(0x7a802d57d8BB9Cc2367d302f85084e53905A7a98, 0, 1, 0)")); // Reverts (ERC1155: insufficient balance)
+        vm.expectRevert(abi.encodeWithSelector(IERC1155Errors.ERC1155InsufficientBalance.selector, player01, 0, 1, 0)); // Reverts (ERC1155: insufficient balance)
         forge.mint(3);
 
         vm.stopPrank();
@@ -197,7 +202,7 @@ contract ForgeTest is Test, Forge_Constants {
         vm.startPrank(player01);
 
         forge.mint(1);
-        vm.expectRevert(abi.encode("ERC1155InsufficientBalance(0x7a802d57d8BB9Cc2367d302f85084e53905A7a98, 0, 1, 2)")); // Reverts (ERC1155: insufficient balance)
+        vm.expectRevert(abi.encodeWithSelector(IERC1155Errors.ERC1155InsufficientBalance.selector, player01, 0, 1, 2)); // Reverts (ERC1155: insufficient balance)
         forge.mint(4);
 
         vm.stopPrank();
@@ -207,7 +212,7 @@ contract ForgeTest is Test, Forge_Constants {
         vm.startPrank(player01);
 
         forge.mint(2);
-        vm.expectRevert(abi.encode("ERC1155InsufficientBalance(0x7a802d57d8BB9Cc2367d302f85084e53905A7a98, 0, 1, 1)")); // Reverts (ERC1155: insufficient balance)
+        vm.expectRevert(abi.encodeWithSelector(IERC1155Errors.ERC1155InsufficientBalance.selector, player01, 0, 1, 1)); // Reverts (ERC1155: insufficient balance)
         forge.mint(4);
 
         vm.stopPrank();
@@ -218,7 +223,7 @@ contract ForgeTest is Test, Forge_Constants {
         vm.startPrank(player01);
 
         forge.mint(2);
-        vm.expectRevert(abi.encode("ERC1155InsufficientBalance(0x7a802d57d8BB9Cc2367d302f85084e53905A7a98, 0, 1, 0)")); // Reverts (ERC1155: insufficient balance)
+        vm.expectRevert(abi.encodeWithSelector(IERC1155Errors.ERC1155InsufficientBalance.selector, player01, 0, 1, 0)); // Reverts (ERC1155: insufficient balance)
         forge.mint(5);
 
         vm.stopPrank();
@@ -228,7 +233,7 @@ contract ForgeTest is Test, Forge_Constants {
         vm.startPrank(player01);
 
         forge.mint(0);
-        vm.expectRevert(abi.encode("ERC1155InsufficientBalance(0x7a802d57d8BB9Cc2367d302f85084e53905A7a98, 0, 1, 2)")); // Reverts (ERC1155: insufficient balance)
+        vm.expectRevert(abi.encodeWithSelector(IERC1155Errors.ERC1155InsufficientBalance.selector, player01, 0, 1, 2)); // Reverts (ERC1155: insufficient balance)
         forge.mint(5);
 
         vm.stopPrank();
@@ -239,7 +244,7 @@ contract ForgeTest is Test, Forge_Constants {
         vm.startPrank(player01);
         forge.mint(0); // Only token 0 (missing 1 and 2 for token 6)
 
-        vm.expectRevert(abi.encode("ERC1155InsufficientBalance(0x7a802d57d8BB9Cc2367d302f85084e53905A7a98, 0, 1, 1)")); // Reverts (ERC1155: insufficient balance)
+        vm.expectRevert(abi.encodeWithSelector(IERC1155Errors.ERC1155InsufficientBalance.selector, player01, 0, 1, 1)); // Reverts (ERC1155: insufficient balance)
         forge.mint(6);
 
         vm.stopPrank();

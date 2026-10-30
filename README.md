@@ -1,17 +1,18 @@
 [![Live Demo](https://img.shields.io/badge/Live-Demo-blue)](https://forge-tokens.vercel.app)
 ![CI-Foundry](https://github.com/SiegfriedBz/Forge-DApp/actions/workflows/foundry-tests.yml/badge.svg)
 ![Foundry](https://img.shields.io/badge/Foundry-Tested-informational)
-![Coverage](https://img.shields.io/badge/Coverage-100%25-brightgreen)
 
 # Forge — A Web3 Token-Composition Case Study
 
-Forge is an **Ethereum Sepolia** DApp built around **ERC-1155** crafting: mint three base materials (token IDs **0–2**) under a per-address cooldown, **forge** composites (**3–6**) with a single-transaction **burn-then-mint**, optionally **trade** any held id back into a basic, or **burn** forged ids only. Rules live in [`Forge.sol`](be/src/Forge.sol); balances live in [`FToken.sol`](be/src/FToken.sol), which only the deployed `Forge` can mint or burn.
+Forge is an **Ethereum Sepolia** DApp built around **ERC-1155** crafting: mint three base materials (token IDs **0–2**) under a per-address cooldown, **forge** composites (**3–6**) with a single-transaction **burn-then-mint**, optionally **trade** any held id for a basic, or **burn** a forged id through `Forge.burn`. Rules live in [`Forge.sol`](be/src/Forge.sol); balances live in [`FToken.sol`](be/src/FToken.sol), which only the deployed `Forge` can mint or burn.
+
+A small learning project from November 2025, on testnet. Its gaps are listed under [Known limitations](#known-limitations).
 
 ---
 
 ## Why
 
-ERC-1155 is a practical standard when one contract needs to represent many fungible and semi-fungible ids. A natural follow-up question is how to keep **composition rules** and **supply mutations** honest when recipes get non-trivial: who is allowed to mint, and how do you avoid half-applied state when burning inputs and minting outputs?
+ERC-1155 is a practical standard when one contract needs to represent many fungible and semi-fungible ids. A natural follow-up question is how to keep **composition rules** and **supply mutations** honest when recipes get non-trivial: who is allowed to mint, and how do you keep users from minting or burning outside the recipes?
 
 Forge is an experiment in that direction. It keeps the **ledger** (`FToken`) supply-focused and the **rules** (`Forge`) explicit: every supply change routes through `Forge`, which encodes cooldowns, recipes, trade constraints, and burn permissions. The UI is a **single-page** app so contracts and UI stay easy to read, reason about, and test together.
 
@@ -50,7 +51,7 @@ Burn one token to receive exactly one of token 0, 1, or 2 (cannot trade into the
 
 ### Burning forged tokens
 
-Only forged IDs (3–6) can be destroyed via `Forge.burn`; basic IDs are protected.
+`Forge.burn` accepts forged IDs (3–6) only. Basic IDs can still be burned through `trade`, which burns one token of any ID.
 
 ![Burning Tokens](./assets/desktop-burn.04.gif)
 
@@ -64,7 +65,7 @@ The same flows on narrow and mobile viewports.
 
 ## How It Works
 
-Two contracts, one ledger: **`Forge`** encodes behavior; **`FToken`** stores ERC-1155 balances. Only `Forge` (as immutable owner of `FToken`) can call `mint`, `burn`, or `burnBatch` on the token contract.
+Two contracts, one ledger: **`Forge`** encodes behavior; **`FToken`** stores ERC-1155 balances. `Forge` deploys `FToken` in its own constructor and becomes its immutable owner, so only `Forge` can call `mint`, `burn` or `burnBatch` on the token contract, and that ownership cannot be misconfigured or transferred. `FToken` has no public mint or burn, so users cannot mint or burn outside the recipes.
 
 | Component | Role |
 |-----------|------|
@@ -75,15 +76,15 @@ Two contracts, one ledger: **`Forge`** encodes behavior; **`FToken`** stores ERC
 
 | Topic | What the code does |
 |-------|---------------------|
-| **Atomic forging** | For IDs 3–6, `Forge.mint` calls `I_TOKEN.burnBatch` then `I_TOKEN.mint` in one transaction so balances do not end up half-updated on success paths. |
-| **Cooldown (basics)** | `mapping(address => uint256) userCoolDownTimer` gates mints for ids 0–2. Default delay is **15 seconds** in [`be/script/Forge_Constants.sol`](be/script/Forge_Constants.sol). |
-| **Access control** | `FToken` uses `onlyOwner` on `mint` / `burn` / `burnBatch`; in the intended deployment, owner is `Forge`. |
-| **Trade and burn rules** | `trade` requires `_tokenIdToBurn != _tokenIdToMint` and `_tokenIdToMint ∈ {0,1,2}`. `burn` rejects basic ids so 0–2 are not destroyed via that path. |
-| **Tests** | Foundry tests under [`be/test/`](be/test/) cover mint, forge, burn, trade, cooldowns, admin paths, and revert cases. |
+| **Forging in one transaction** | For IDs 3–6, `Forge.mint` calls `I_TOKEN.burnBatch` then `I_TOKEN.mint` in one transaction. |
+| **Cooldown (basics)** | `mapping(address => uint256) userCoolDownTimer` gates mints for ids 0–2. Default delay is **15 seconds** in [`be/script/Forge_Constants.sol`](be/script/Forge_Constants.sol). The timer is written before the mint, so re-entering through `onERC1155Received` cannot skip it. It is per address, so it slows minting but a new wallet gets around it. |
+| **Access control** | `FToken` guards `mint` / `burn` / `burnBatch` with a custom check against an immutable `I_OWNER` (not OpenZeppelin `Ownable`, and no ownership transfer); the owner is `Forge`. In `Forge`, the only admin function, `setCoolDownDelay`, is limited to the deployer's address. |
+| **Trade and burn rules** | `trade` requires `_tokenIdToBurn != _tokenIdToMint` and `_tokenIdToMint ∈ {0,1,2}`; it does not bound-check the ID it burns, and it allows basic-to-basic swaps with no cooldown. `burn` rejects basic ids, so 0–2 are not destroyed via that path. |
+| **Tests** | Foundry tests under [`be/test/`](be/test/) run the real deploy script in `setUp` and cover mint, forge, burn, trade, cooldowns, admin paths and revert cases, asserting exact error selectors and events. |
 
 ### Event-driven UI
 
-The app uses `watchContractEvent` (wagmi core) over an **Alchemy WebSocket** transport ([`fe/app/_config/wagmi.ts`](fe/app/_config/wagmi.ts)) to subscribe to all four `Forge` events and invalidate per-token TanStack Query keys without polling:
+The app uses `watchContractEvent` (wagmi core) over an **Alchemy WebSocket** transport ([`fe/app/_config/wagmi.ts`](fe/app/_config/wagmi.ts)) to subscribe to all four `Forge` events and invalidate per-token TanStack Query keys without polling. The watchers do not filter by user and read only the first log of each batch, so another user's action can refresh your balances, and a second event in the same batch is missed until the next refresh:
 
 - `Forge__MintToken` — invalidates the minted token's balance and retriggers forgeability.
 - `Forge__ForgeToken` — invalidates the forged token's balance and all burnt input balances, then retriggers forgeability.
@@ -130,11 +131,11 @@ graph TD
 
 ## Testing
 
-Smart-contract tests live under [`be/test/`](be/test/) (`ForgeTest.t.sol`, `FTokenTest.t.sol`) and run with Foundry. The suite is **37 tests** covering deployment, basic mint + cooldown, all forge recipes, insufficient-balance reverts, burn/trade rules, `getForgeData`, and owner-only `setCoolDownDelay`.
+Smart-contract tests live under [`be/test/`](be/test/) (`ForgeTest.t.sol`, `FTokenTest.t.sol`) and run with Foundry. The suite is **38 tests** covering deployment, basic mint + cooldown, all forge recipes, insufficient-balance reverts, burn/trade rules, `getForgeData`, and owner-only `setCoolDownDelay`.
 
-Tests require **two environment variables**: `MY_ADDRESS` (asserted against `Forge.I_OWNER()` / `FToken.I_OWNER()`) and `PRIVATE_KEY` (used by `ForgeScript` / `FTokenScript` inside `setUp`). Both must be set or the suite will not build. CI injects them from GitHub secrets; locally, either export your deployer key pair or use Foundry's default Anvil pair (`MY_ADDRESS=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266`, `PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80`) for a quick run.
+The tests need no environment variables or secrets: `setUp` derives a throwaway deployer key with `makeAddrAndKey` and hands it to the real deploy script through `PRIVATE_KEY`, so CI runs without GitHub secrets.
 
-**Coverage (local):** `forge coverage` reports **100%** lines, statements, branches, and functions on the project-owned contracts and deploy scripts (see table below). **CI** runs `forge test -vvv` on every push and PR to `main` / `develop` — it does **not** run `forge coverage` automatically ([`.github/workflows/foundry-tests.yml`](.github/workflows/foundry-tests.yml)).
+**Coverage (local run):** `forge coverage` reported **100%** of lines, statements, branches and functions on the two contracts and the two deploy scripts (table below). That is 38 unit tests, with no fuzz or invariant tests, and `trade` has a single happy-path test. **CI** runs `forge test -vvv` on every push and PR to `main` / `develop`; it does **not** run `forge coverage` ([`.github/workflows/foundry-tests.yml`](.github/workflows/foundry-tests.yml)).
 
 ```bash
 cd be && forge install
@@ -143,15 +144,15 @@ cd be && forge coverage
 ```
 
 <details>
-  <summary><strong>View coverage report (100%)</strong></summary>
+  <summary><strong>View the local coverage report</strong></summary>
 
 | File                          | Lines            | Statements       | Branches         | Funcs            |
 | ----------------------------- | ---------------- | ---------------- | ---------------- | ---------------- |
-| **script/FTokenScript.s.sol** | 100% (6/6)       | 100% (5/5)       | 100% (0/0)       | 100% (1/1)       |
-| **script/ForgeScript.s.sol**  | 100% (6/6)       | 100% (5/5)       | 100% (0/0)       | 100% (1/1)       |
-| **src/FToken.sol**            | 100% (16/16)     | 100% (11/11)     | 100% (1/1)       | 100% (7/7)       |
+| **script/FTokenScript.s.sol** | 100% (6/6)       | 100% (5/5)       | N/A (0/0)        | 100% (1/1)       |
+| **script/ForgeScript.s.sol**  | 100% (6/6)       | 100% (5/5)       | N/A (0/0)        | 100% (1/1)       |
+| **src/FToken.sol**            | 100% (16/16)     | 100% (11/11)     | 100% (3/3)       | 100% (7/7)       |
 | **src/Forge.sol**             | 100% (67/67)     | 100% (78/78)     | 100% (18/18)     | 100% (8/8)       |
-| **Total**                     | **100% (95/95)** | **100% (99/99)** | **100% (19/19)** | **100% (17/17)** |
+| **Total**                     | **100% (95/95)** | **100% (99/99)** | **100% (21/21)** | **100% (17/17)** |
 
 </details>
 
@@ -165,8 +166,8 @@ cd be && forge coverage
 | Frontend | Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4, shadcn/ui (Radix) |
 | Web3 client | wagmi v2, viem, RainbowKit, Alchemy HTTP + WebSocket |
 | State and forms | TanStack Query v5, React Context ([`fe/app/_context/tokens-provider.tsx`](fe/app/_context/tokens-provider.tsx)), React Hook Form + Zod |
-| Metadata | IPFS base URI in [`be/script/Forge_Constants.sol`](be/script/Forge_Constants.sol); local metadata files named `0`–`6` (no extension, JSON content) under [`ipfs-data/metadata/`](ipfs-data/metadata/) |
-| Quality | Foundry tests (100% coverage locally), ESLint, GitHub Actions |
+| Metadata | The contract's `uri` points to an IPFS base URI set in [`be/script/Forge_Constants.sol`](be/script/Forge_Constants.sol), with metadata files `0`–`6` (JSON, no extension) under [`ipfs-data/metadata/`](ipfs-data/metadata/). The app itself loads token images from `fe/public/tokens/`. |
+| Quality | Foundry tests, ESLint, GitHub Actions |
 
 ---
 
@@ -229,9 +230,19 @@ pnpm dev
 
 ---
 
+## Known limitations
+
+- **The admin can stop basic mints.** `setCoolDownDelay` has no bounds and the owner is a single EOA: a huge value overflows the timer so every basic mint reverts; 0 disables the cooldown.
+- **Recipes are hard-coded.** `I_MAX_TOKEN_ID` is a constructor parameter, but recipes stop at 6. A deploy with a higher maximum would let ID 7 mint for free (the live deploy uses 6).
+- **Trade.** `trade` does not bound-check the ID it burns and allows basic-to-basic swaps with no cooldown.
+- **The cooldown is per address**, so it is not Sybil-resistant. The UI countdown uses the browser clock and never reads `userCoolDownTimer`.
+- **Event watchers** do not filter by user and read only the first log.
+- **No fuzz or invariant tests.**
+
 ## Possible extensions
 
 - **L2 deployment comparison** — Deploy the same `Forge`/`FToken` pattern to an L2 testnet and compare gas on `burnBatch` + `mint` paths vs Sepolia.
+- **Bounded admin** — Cap `setCoolDownDelay` and derive recipes from `I_MAX_TOKEN_ID` (or fix it at 6).
 - **Per-token or progressive cooldowns** — Replace the single `coolDownDelay` with per-id tuning if you want different issuance curves for each basic.
 - **Secondary marketplace** — Integrate standard ERC-1155 marketplace flows alongside the on-chain `trade` helper (which only mints basics).
 
@@ -241,6 +252,6 @@ pnpm dev
 
 **Siegfried Bozza** · M.Sc / M.Eng · Full-stack engineer & Web3 builder.
 
-Forge was built solo, alongside a full-time full-stack role (frontend, contracts, tests, deployment).
+Forge was built solo in November 2025, alongside a full-time full-stack role (frontend, contracts, tests, deployment).
 
 [LinkedIn](https://www.linkedin.com/in/siegfriedbozza/)

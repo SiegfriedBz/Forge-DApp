@@ -16,10 +16,14 @@ contract FTokenTest is Test, FToken_Constants {
     FTokenScript public tokenDeployer;
     FToken public token;
 
-    address owner = vm.envAddress("MY_ADDRESS");
+    address owner;
     address player01 = makeAddr("player01");
 
     function setUp() public {
+        // 0. derive a throwaway deployer key, FTokenScript reads it from PRIVATE_KEY
+        uint256 ownerKey;
+        (owner, ownerKey) = makeAddrAndKey("owner");
+        vm.setEnv("PRIVATE_KEY", vm.toString(bytes32(ownerKey)));
         // 1. deploy FToken deployer
         tokenDeployer = new FTokenScript();
         // 2. deploy FToken
@@ -35,6 +39,11 @@ contract FTokenTest is Test, FToken_Constants {
     function test_uri() public view {
         string memory uri = token.uri(1);
         assertEq(uri, string.concat(TOKEN_URI, "1"));
+    }
+
+    function test_uri_EmptyWhenNoBaseUri() public {
+        FToken bareToken = new FToken("");
+        assertEq(bareToken.uri(1), "");
     }
 
     // === Access Control Tests ===
