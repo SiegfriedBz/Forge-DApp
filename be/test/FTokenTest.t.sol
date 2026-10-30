@@ -41,6 +41,11 @@ contract FTokenTest is Test, FToken_Constants {
         assertEq(uri, string.concat(TOKEN_URI, "1"));
     }
 
+    function test_uri_EmptyWhenNoBaseUri() public {
+        FToken bareToken = new FToken("");
+        assertEq(bareToken.uri(1), "");
+    }
+
     // === Access Control Tests ===
     function test_mint_RevertWhen_NotOwner() public {
         vm.prank(player01);

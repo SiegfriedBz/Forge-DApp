@@ -131,11 +131,11 @@ graph TD
 
 ## Testing
 
-Smart-contract tests live under [`be/test/`](be/test/) (`ForgeTest.t.sol`, `FTokenTest.t.sol`) and run with Foundry. The suite is **37 tests** covering deployment, basic mint + cooldown, all forge recipes, insufficient-balance reverts, burn/trade rules, `getForgeData`, and owner-only `setCoolDownDelay`.
+Smart-contract tests live under [`be/test/`](be/test/) (`ForgeTest.t.sol`, `FTokenTest.t.sol`) and run with Foundry. The suite is **38 tests** covering deployment, basic mint + cooldown, all forge recipes, insufficient-balance reverts, burn/trade rules, `getForgeData`, and owner-only `setCoolDownDelay`.
 
 The tests need no environment variables or secrets: `setUp` derives a throwaway deployer key with `makeAddrAndKey` and hands it to the real deploy script through `PRIVATE_KEY`, so CI runs without GitHub secrets.
 
-**Coverage (local run):** `forge coverage` reported **100%** of lines, statements, branches and functions on the two contracts and the two deploy scripts (table below). That is 37 unit tests, with no fuzz or invariant tests, and `trade` has a single happy-path test. **CI** runs `forge test -vvv` on every push and PR to `main` / `develop`; it does **not** run `forge coverage` ([`.github/workflows/foundry-tests.yml`](.github/workflows/foundry-tests.yml)).
+**Coverage (local run):** `forge coverage` reported **100%** of lines, statements, branches and functions on the two contracts and the two deploy scripts (table below). That is 38 unit tests, with no fuzz or invariant tests, and `trade` has a single happy-path test. **CI** runs `forge test -vvv` on every push and PR to `main` / `develop`; it does **not** run `forge coverage` ([`.github/workflows/foundry-tests.yml`](.github/workflows/foundry-tests.yml)).
 
 ```bash
 cd be && forge install
@@ -148,11 +148,11 @@ cd be && forge coverage
 
 | File                          | Lines            | Statements       | Branches         | Funcs            |
 | ----------------------------- | ---------------- | ---------------- | ---------------- | ---------------- |
-| **script/FTokenScript.s.sol** | 100% (6/6)       | 100% (5/5)       | 100% (0/0)       | 100% (1/1)       |
-| **script/ForgeScript.s.sol**  | 100% (6/6)       | 100% (5/5)       | 100% (0/0)       | 100% (1/1)       |
-| **src/FToken.sol**            | 100% (16/16)     | 100% (11/11)     | 100% (1/1)       | 100% (7/7)       |
+| **script/FTokenScript.s.sol** | 100% (6/6)       | 100% (5/5)       | N/A (0/0)        | 100% (1/1)       |
+| **script/ForgeScript.s.sol**  | 100% (6/6)       | 100% (5/5)       | N/A (0/0)        | 100% (1/1)       |
+| **src/FToken.sol**            | 100% (16/16)     | 100% (11/11)     | 100% (3/3)       | 100% (7/7)       |
 | **src/Forge.sol**             | 100% (67/67)     | 100% (78/78)     | 100% (18/18)     | 100% (8/8)       |
-| **Total**                     | **100% (95/95)** | **100% (99/99)** | **100% (19/19)** | **100% (17/17)** |
+| **Total**                     | **100% (95/95)** | **100% (99/99)** | **100% (21/21)** | **100% (17/17)** |
 
 </details>
 
